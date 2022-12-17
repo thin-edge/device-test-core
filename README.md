@@ -1,4 +1,4 @@
-# c8y-test-core
+# device-test-core
 
 Device test core library for running tests against a device using a generic interface, e.g. SSH, Docker, or some other custom type.
 
