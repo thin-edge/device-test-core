@@ -65,7 +65,7 @@ class DockerDeviceFactory:
 
     def create_device(
         self,
-        device_id: str = "tedge01",
+        device_id: str = "device-01",
         device_type: str = "docker-debian",
         image: str = "debian-systemd",
         env_file=".env",
@@ -84,9 +84,9 @@ class DockerDeviceFactory:
             image (str, optional): Docker image to use to start the containers.
                                    Defaults to 'debian-systemd'.
             test_id (str, optional): Test id used to identify the container using a label
-                called "tedge.test_id"
+                called "device.test_id"
             test_suite (str, optional): Test set which the container belongs to.
-                                        Added to the label "tedge.test_group_id"
+                                        Added to the label "device.test_group_id"
             env (Dict[str,str], optional): Additional environment variables to be added to
                 the container.
                 These will override any values provided by the env_file. (docker devices only!).
@@ -124,10 +124,10 @@ class DockerDeviceFactory:
             "network": self._network.id,
             "volumes": {},
             "labels": {
-                "tedge.inttest": "1",
-                "tedge.device_id": device_id,
-                "tedge.test_group_id": test_suite,
-                "tedge.test_id": test_id,
+                "device.inttest": "1",
+                "device.device_id": device_id,
+                "device.test_group_id": test_suite,
+                "device.test_id": test_id,
             },
             "privileged": True,
         }
@@ -380,9 +380,9 @@ class DockerDeviceFactory:
     def remove_container_devices(self, group_id: str = ""):
         """Remove the containers related to the integration testing"""
         logging.info("Removing all pre-existing docker device containers")
-        labels = ["tedge.inttest=1"]
+        labels = ["device.inttest=1"]
         if group_id:
-            labels.append(f"tedge.test_group_id={group_id}")
+            labels.append(f"device.test_group_id={group_id}")
 
         containers = self._docker_client.containers.list(
             all=True,
