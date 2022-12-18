@@ -214,7 +214,7 @@ class SSHDeviceAdapter(DeviceAdapter):
 
             assert (
                 exit_code == exp_exit_code
-            ), f"`{cmd_snippet}` returned an unexpected exit code"
+            ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
 
         return output
 
