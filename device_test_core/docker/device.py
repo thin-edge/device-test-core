@@ -158,14 +158,14 @@ class DockerDeviceAdapter(DeviceAdapter):
 
         exit_code, output = self.container.exec_run(run_cmd)
         if log_output:
-            logging.info(
+            log.info(
                 "cmd: %s, exit code: %d, stdout: %s",
                 run_cmd,
                 exit_code,
                 output.decode("utf-8"),
             )
         else:
-            logging.info("cmd: %s, exit code: %d", run_cmd, exit_code)
+            log.info("cmd: %s, exit code: %d", run_cmd, exit_code)
         return exit_code, output
 
     def assert_command(
@@ -210,12 +210,12 @@ class DockerDeviceAdapter(DeviceAdapter):
 
     def restart(self):
         """Restart the docker container"""
-        logging.info("Restarting %s", self.name)
+        log.info("Restarting %s", self.name)
         startup_delay_sec = 1
         self.container.stop()
         if startup_delay_sec > 0:
             time.sleep(startup_delay_sec)
-        logging.info("Starting container %s", self.name)
+        log.info("Starting container %s", self.name)
         self.container.start()
 
     def disconnect_network(self):
@@ -276,3 +276,11 @@ class DockerDeviceAdapter(DeviceAdapter):
         # Make sure device is connected again after the test
         if self.simulator:
             self.simulator.connect_network(self.container)
+
+        if self.container:
+            log.info(
+                "Removing container (forcefully). id=%s, name=%s",
+                self.container.id,
+                self.container.name,
+            )
+            self.container.remove(force=True)
