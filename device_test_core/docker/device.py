@@ -45,7 +45,9 @@ class DockerDeviceAdapter(DeviceAdapter):
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, name: str, device_id: str = None, container = None, simulator = None):
+    def __init__(
+        self, name: str, device_id: str = None, container=None, simulator=None
+    ):
         self._container = container
         self.simulator = simulator
         self._is_existing_device = False
