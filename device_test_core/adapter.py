@@ -14,7 +14,7 @@ class DeviceAdapter(ABC):
 
     def __init__(self, name: str, device_id: str = None, config: Dict[str, Any] = None):
         self._name = name
-        self._device_id = device_id
+        self._device_id = device_id or name     # Default ot using name if device_id is empty
         self._start_time = None
         self._test_start_time = datetime.now(timezone.utc)
         self._is_existing_device = False
