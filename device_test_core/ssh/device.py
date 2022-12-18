@@ -169,6 +169,10 @@ class SSHDeviceAdapter(DeviceAdapter):
         f = chan.makefile()
         chan.exec_command(shlex.join(run_cmd))
         output = f.read()
+
+        # Note: Replace the \r which are added to due the simulated terminal
+        # https://stackoverflow.com/questions/35887380/why-does-paramiko-returns-r-n-as-newline-instead-of-n
+        output = output.replace(b"\r\n", b"\n")
         # Check exist status after calling read, otherwise it hangs
         # https://github.com/paramiko/paramiko/issues/448
         exit_code = chan.recv_exit_status()
