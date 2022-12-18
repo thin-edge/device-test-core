@@ -145,22 +145,25 @@ class DockerDeviceAdapter(DeviceAdapter):
         Returns:
             Tuple[int, Any]: Docker command output (exit_code, output)
         """
-        if not isinstance(cmd, list):
-            cmd = [cmd]
+        run_cmd = cmd
 
         if shell:
-            cmd = ["/bin/bash", "-c"] + cmd
+            run_cmd = ["/bin/bash", "-c"]
+            if isinstance(cmd, (list, tuple)):
+                run_cmd.extend(cmd)
+            else:
+                run_cmd.append(cmd)
 
-        exit_code, output = self.container.exec_run(cmd)
+        exit_code, output = self.container.exec_run(run_cmd)
         if log_output:
             logging.info(
                 "cmd: %s, exit code: %d, stdout: %s",
-                cmd,
+                run_cmd,
                 exit_code,
                 output.decode("utf-8"),
             )
         else:
-            logging.info("cmd: %s, exit code: %d", cmd, exit_code)
+            logging.info("cmd: %s, exit code: %d", run_cmd, exit_code)
         return exit_code, output
 
     def assert_command(

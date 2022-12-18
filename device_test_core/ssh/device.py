@@ -147,16 +147,19 @@ class SSHDeviceAdapter(DeviceAdapter):
         Returns:
             Tuple[int, Any]: Docker command output (exit_code, output)
         """
-        if not isinstance(cmd, list):
-            cmd = [cmd]
-
-        if shell:
-            cmd = ["/bin/bash", "-c"] + cmd
-            # cmd = ["/bin/bash", "-c", cmd, "2>\&1"]
+        run_cmd = []
 
         use_sudo = self.use_sudo()
         if use_sudo:
-            cmd = ["sudo"] + cmd
+            run_cmd.append("sudo")
+
+        if shell:
+            run_cmd.extend(["/bin/bash", "-c"])
+
+        if isinstance(cmd, (list, tuple)):
+            run_cmd.extend(cmd)
+        else:
+            run_cmd.append(cmd)
 
         tran = self._client.get_transport()
         timeout = kwargs.pop("timeout", 30)
@@ -164,7 +167,7 @@ class SSHDeviceAdapter(DeviceAdapter):
 
         chan.get_pty()
         f = chan.makefile()
-        chan.exec_command(shlex.join(cmd))
+        chan.exec_command(shlex.join(run_cmd))
         output = f.read()
         # Check exist status after calling read, otherwise it hangs
         # https://github.com/paramiko/paramiko/issues/448
@@ -178,7 +181,7 @@ class SSHDeviceAdapter(DeviceAdapter):
         if log_output:
             logging.info(
                 "cmd: %s, exit code: %d, stdout: %s",
-                cmd,
+                run_cmd,
                 exit_code,
                 output.decode("utf-8"),
             )
