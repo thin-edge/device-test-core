@@ -273,9 +273,10 @@ class DockerDeviceAdapter(DeviceAdapter):
 
     def cleanup(self):
         """Cleanup the device. This will be called when the define is no longer needed"""
+        # Note: Reconnecting the container only makes sense if it is not destroyed afterwards
         # Make sure device is connected again after the test
-        if self.simulator:
-            self.simulator.connect_network(self.container)
+        # if self.simulator:
+        #     self.simulator.connect_network(self.container)
 
         if self.container:
             log.info(
