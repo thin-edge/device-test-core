@@ -249,17 +249,14 @@ class SSHDeviceAdapter(DeviceAdapter):
         Returns:
             str: Device id
         """
-        (code, output) = self.container.exec_run(
-            'sh -c "tedge config get device.id"', stderr=True, demux=True
-        )
-        stdout, stderr = output
+        code, output = self.execute_command("tedge config get device.id")
         if code != 0:
             raise Exception(
                 "Failed to get device id. container: "
                 f"name={self.container.name}, id={self.container.id}, "
-                f"code={code}, stdout={stdout}, stderr={stderr}"
+                f"code={code}, output={output}"
             )
-        device_id = stdout.strip().decode("utf-8")
+        device_id = output.strip().decode("utf-8")
 
         logging.info("Device id: %s", device_id)
         return device_id
