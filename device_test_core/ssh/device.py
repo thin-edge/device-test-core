@@ -45,19 +45,6 @@ class SSHDeviceAdapter(DeviceAdapter):
         self._connect()
 
     @property
-    def container(self) -> Container:
-        """Docker container
-
-        Returns:
-            Container: Container
-        """
-        return self._container
-
-    @container.setter
-    def container(self, container: Container):
-        self._container = container
-
-    @property
     def is_existing_device(self) -> bool:
         """Is existing device
 
