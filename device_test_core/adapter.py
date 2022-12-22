@@ -149,7 +149,8 @@ class DeviceAdapter(ABC):
         output = []
         if since:
             if isinstance(since, datetime):
-                since = since.isoformat(sep=" ", timespec="seconds") + " UTC"
+                # use linux timestamp as it it simplifies the datetime/timezone parsing
+                since = f"@{int(since.timestamp())}"
             cmd += f' --since "{since}"'
         exit_code, logs = self.execute_command(cmd, log_output=False)
 
