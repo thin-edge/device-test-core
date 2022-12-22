@@ -165,7 +165,7 @@ class DockerDeviceAdapter(DeviceAdapter):
         exit_code, output = self.container.exec_run(run_cmd)
         if log_output:
             log.info(
-                "cmd: %s, exit code: %d, stdout: %s",
+                "cmd: %s, exit code: %d, stdout:\n%s",
                 run_cmd,
                 exit_code,
                 output.decode("utf-8"),

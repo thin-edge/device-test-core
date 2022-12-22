@@ -183,7 +183,7 @@ class SSHDeviceAdapter(DeviceAdapter):
         # output = "\n".join(stdout.readlines())
         if log_output:
             logging.info(
-                "cmd: %s, exit code: %d, stdout: %s",
+                "cmd: %s, exit code: %d, stdout:\n%s",
                 run_cmd,
                 exit_code,
                 output.decode("utf-8"),
