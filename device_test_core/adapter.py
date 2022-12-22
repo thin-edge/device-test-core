@@ -137,15 +137,19 @@ class DeviceAdapter(ABC):
 
         Args:
             timestamps (bool, optional): Included timestamps in the log entries. Defaults to False.
-            since (Any, optional): Get logs since the provided data. Defaults to None.
+            since (Any, optional): Get logs since the provided data. If set to None
+                then the test start time will be used.
 
         Returns:
             List[str]: List of log entries
         """
         cmd = "journalctl --lines 100000 --no-pager -u 'tedge*' -u 'c8y*' -u mosquitto"
 
+        since = since if since is not None else self.test_start_time
         output = []
         if since:
+            if isinstance(since, datetime):
+                since = since.isoformat(sep=" ", timespec="seconds") + " UTC"
             cmd += f' --since "{since}"'
         exit_code, logs = self.execute_command(cmd, log_output=False)
 
