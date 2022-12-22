@@ -3,7 +3,7 @@ import os
 import logging
 import glob
 import tempfile
-from typing import List, Any, Tuple
+from typing import Any, Tuple, Optional
 import time
 from datetime import datetime, timezone
 from docker.models.containers import Container
@@ -223,6 +223,16 @@ class DockerDeviceAdapter(DeviceAdapter):
             time.sleep(startup_delay_sec)
         log.info("Starting container %s", self.name)
         self.container.start()
+
+    def get_ipaddress(self) -> Optional[str]:
+        """Get IP address of the device"""
+        networks = self.container.attrs['NetworkSettings']['Networks']
+
+        if networks:
+            network = list(networks.values())[0]
+            return network['IPAddress']
+
+        return None
 
     def disconnect_network(self):
         """Disconnect the docker container from the network"""

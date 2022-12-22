@@ -1,6 +1,6 @@
 """Device adapter"""
 import logging
-from typing import List, Any, Tuple, Dict
+from typing import List, Any, Tuple, Dict, Optional
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
 
@@ -123,6 +123,10 @@ class DeviceAdapter(ABC):
         """Restart device"""
         logging.info("Restarting %s", self.name)
         self.execute_command("shutdown -r now")
+
+    @abstractmethod
+    def get_ipaddress(self) -> Optional[str]:
+        """Get the ip address of the device"""
 
     @abstractmethod
     def disconnect_network(self):

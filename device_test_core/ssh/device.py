@@ -1,6 +1,6 @@
 """SSH Device Adapter"""
 import logging
-from typing import List, Any, Tuple, Dict
+from typing import Any, Tuple, Dict, Optional
 import os
 import shlex
 import time
@@ -239,6 +239,10 @@ class SSHDeviceAdapter(DeviceAdapter):
             time.sleep(startup_delay_sec)
         logging.info("Starting container %s", self.name)
         self.container.start()
+
+    def get_ipaddress(self) -> Optional[str]:
+        """Get IP address of the device"""
+        return self._config.get("hostname")
 
     def disconnect_network(self):
         """Disconnect the docker container from the network"""
