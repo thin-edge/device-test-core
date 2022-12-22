@@ -72,6 +72,7 @@ class DockerDeviceFactory:
         test_suite: str = "",
         test_id: str = "",
         env: Dict[str, str] = None,
+        **kwargs,
     ) -> DeviceAdapter:
         """Create a new device (container) from the provided image
 

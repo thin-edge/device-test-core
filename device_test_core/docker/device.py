@@ -52,11 +52,12 @@ class DockerDeviceAdapter(DeviceAdapter):
         container=None,
         simulator=None,
         should_cleanup: bool = None,
+        **kwargs,
     ):
         self._container = container
         self.simulator = simulator
         self._is_existing_device = False
-        super().__init__(name, device_id, should_cleanup=should_cleanup)
+        super().__init__(name, device_id, should_cleanup=should_cleanup, config=kwargs)
 
     @property
     def container(self) -> Container:

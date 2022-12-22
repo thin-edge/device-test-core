@@ -1,13 +1,14 @@
 """SSH device factory"""
 
 import logging
+import os
 import dotenv
 from typing import Dict
 from device_test_core.ssh.device import SSHDeviceAdapter, DeviceAdapter
 
 # pylint: disable=broad-except
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 class SSHDeviceFactory:
@@ -34,16 +35,18 @@ class SSHDeviceFactory:
         Returns:
             DeviceAdapter: Device adapter
         """
-        env_options = dotenv.dotenv_values(env_file) or {}
+
+        env_options = {}
+
+        if os.path.exists(env_file):
+            log.info("Loading environment from file: %s", env_file)
+            env_options = dotenv.dotenv_values(env_file) or {}
 
         if env is not None:
-            logging.info("Using custom environment settings. %s", env)
+            log.info("Using additional custom environment settings")
             env_options = {**env_options, **env}
 
-        logging.info("Connecting to device [%s]", device_id)
+        log.info("Connecting to device [%s]", device_id)
 
-        device = SSHDeviceAdapter(device_id, config=kwargs)
+        device = SSHDeviceAdapter(device_id, env=env_options, config=kwargs)
         return device
-
-    def cleanup(self):
-        """Cleaup operation"""

@@ -30,7 +30,7 @@ except ImportError:
 from scp import SCPClient
 
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 class SSHDeviceAdapter(DeviceAdapter):
@@ -42,10 +42,12 @@ class SSHDeviceAdapter(DeviceAdapter):
         self,
         name: str,
         device_id: str = None,
+        env: Dict[str, str] = None,
         should_cleanup: bool = None,
         config: Dict[str, Any] = None,
     ):
         super().__init__(name, device_id, should_cleanup=should_cleanup, config=config)
+        self._env = env or {}
         self._client = SSHClient()
         self._client.load_system_host_keys()
         self._connect()
@@ -157,6 +159,10 @@ class SSHDeviceAdapter(DeviceAdapter):
         tran = self._client.get_transport()
         timeout = kwargs.pop("timeout", 30)
         chan = tran.open_session(timeout=timeout)
+
+        if self._env:
+            log.info("Setting environment variables")
+            chan.update_environment(self._env)
 
         chan.get_pty()
         f = chan.makefile()
