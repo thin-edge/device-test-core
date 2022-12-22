@@ -12,7 +12,13 @@ class DeviceAdapter(ABC):
     which can have multiple device endpoints (e.g. docker, ssh, podman etc.)
     """
 
-    def __init__(self, name: str, device_id: str = None, config: Dict[str, Any] = None):
+    def __init__(
+        self,
+        name: str,
+        device_id: str = None,
+        should_cleanup: bool = None,
+        config: Dict[str, Any] = None,
+    ):
         self._name = name
         self._device_id = (
             device_id or name
@@ -21,6 +27,7 @@ class DeviceAdapter(ABC):
         self._test_start_time = datetime.now(timezone.utc)
         self._is_existing_device = False
         self._config = config
+        self._should_cleanup = should_cleanup
 
     @property
     def test_start_time(self) -> datetime:
@@ -160,9 +167,31 @@ class DeviceAdapter(ABC):
         """
         return self._device_id
 
+    @property
+    def should_cleanup(self) -> bool:
+        """Should the device be cleaned up after
+
+        Returns:
+            bool: True if the cleanup method should be executed
+        """
+        return self._should_cleanup
+
+    @should_cleanup.setter
+    def should_cleanup(self, value: bool):
+        """Set if the device should be cleaned up or not
+
+        Args:
+            value (bool): New value to set
+        """
+        self._should_cleanup = value
+
     @abstractmethod
-    def cleanup(self):
-        """Cleanup the device. This will be called when the define is no longer needed"""
+    def cleanup(self, force: bool = False):
+        """Cleanup the device. This will be called when the define is no longer needed
+
+        Args:
+            force (bool): Force the cleanup process. Ignore the should_cleanup setting. Defaults to False
+        """
 
     @abstractmethod
     def copy_to(self, src: str, dst: str):

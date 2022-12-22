@@ -46,12 +46,17 @@ class DockerDeviceAdapter(DeviceAdapter):
     # pylint: disable=too-many-public-methods
 
     def __init__(
-        self, name: str, device_id: str = None, container=None, simulator=None
+        self,
+        name: str,
+        device_id: str = None,
+        container=None,
+        simulator=None,
+        should_cleanup: bool = None,
     ):
         self._container = container
         self.simulator = simulator
         self._is_existing_device = False
-        super().__init__(name, device_id)
+        super().__init__(name, device_id, should_cleanup=should_cleanup)
 
     @property
     def container(self) -> Container:
@@ -271,12 +276,16 @@ class DockerDeviceAdapter(DeviceAdapter):
             if archive_path and os.path.exists(archive_path):
                 os.unlink(archive_path)
 
-    def cleanup(self):
+    def cleanup(self, force: bool = False):
         """Cleanup the device. This will be called when the define is no longer needed"""
         # Note: Reconnecting the container only makes sense if it is not destroyed afterwards
         # Make sure device is connected again after the test
         # if self.simulator:
         #     self.simulator.connect_network(self.container)
+
+        if not force and not self.should_cleanup:
+            log.info("Skipping cleanup due to should_cleanup not being set")
+            return
 
         if self.container:
             log.info(

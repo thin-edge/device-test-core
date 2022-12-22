@@ -38,8 +38,14 @@ class SSHDeviceAdapter(DeviceAdapter):
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, name: str, device_id: str = None, config: Dict[str, Any] = None):
-        super().__init__(name, device_id, config)
+    def __init__(
+        self,
+        name: str,
+        device_id: str = None,
+        should_cleanup: bool = None,
+        config: Dict[str, Any] = None,
+    ):
+        super().__init__(name, device_id, should_cleanup=should_cleanup, config=config)
         self._client = SSHClient()
         self._client.load_system_host_keys()
         self._connect()
@@ -285,7 +291,11 @@ class SSHDeviceAdapter(DeviceAdapter):
 
             self.assert_command(f"tar xvf '{remote_tmp_file}' -C '{dst}'")
 
-    def cleanup(self):
+    def cleanup(self, force: bool = False):
         """Cleanup the device. This will be called when the define is no longer needed"""
+        if not force and not self.should_cleanup:
+            log.info("Skipping cleanup due to should_cleanup not being set")
+            return
+
         if self._client:
             self._client.close()
