@@ -226,11 +226,11 @@ class DockerDeviceAdapter(DeviceAdapter):
 
     def get_ipaddress(self) -> Optional[str]:
         """Get IP address of the device"""
-        networks = self.container.attrs['NetworkSettings']['Networks']
+        networks = self.container.attrs["NetworkSettings"]["Networks"]
 
         if networks:
             network = list(networks.values())[0]
-            return network['IPAddress']
+            return network["IPAddress"]
 
         return None
 
