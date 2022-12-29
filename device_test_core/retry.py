@@ -32,8 +32,8 @@ def configure_retry_on_members(obj: object, pattern: str, **kwargs):
 def retrier(func, *args, **kwargs):
     attempt = None
     try:
-        wait = float(kwargs.get("wait", 2))
-        timeout = float(kwargs.get("timeout", 30))
+        wait = float(kwargs.pop("wait", 2))
+        timeout = float(kwargs.pop("timeout", 30))
 
         for attempt in Retrying(
             retry=(
