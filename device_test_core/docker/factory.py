@@ -57,9 +57,16 @@ class DockerDeviceFactory:
             network = None
 
         if network is None:
-            network = self._docker_client.networks.create(
-                self._network_name, driver="bridge", check_duplicate=True
-            )
+            try:
+                network = self._docker_client.networks.create(
+                    self._network_name, driver="bridge", check_duplicate=True
+                )
+            except APIError as ex:
+                if ex.status_code == 409:
+                    # ignore conflict/duplicate errors which may happen due to race conditions
+                    network = self._find_network(self._network_name)
+                else:
+                    raise
 
         return network
 
