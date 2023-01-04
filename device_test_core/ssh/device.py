@@ -148,9 +148,6 @@ class SSHDeviceAdapter(DeviceAdapter):
         if use_sudo:
             run_cmd.extend(["sudo", "-E"])
 
-        if shell:
-            run_cmd.extend(["/bin/bash", "-c"])
-
         if self._env:
             log.info("Setting environment variables")
             envs = ["env"] + [
@@ -158,6 +155,9 @@ class SSHDeviceAdapter(DeviceAdapter):
                 for key, value in self._env.items()
             ]
             run_cmd.extend(envs)
+
+        if shell:
+            run_cmd.extend(["/bin/bash", "-c"])
 
         if isinstance(cmd, (list, tuple)):
             run_cmd.extend(cmd)
