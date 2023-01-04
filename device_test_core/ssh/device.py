@@ -165,7 +165,7 @@ class SSHDeviceAdapter(DeviceAdapter):
             run_cmd.append(cmd)
 
         tran = self._client.get_transport()
-        timeout = kwargs.pop("timeout", 30)
+        timeout = kwargs.pop("timeout", 120)
         chan = tran.open_session(timeout=timeout)
 
         chan.get_pty()
