@@ -287,19 +287,8 @@ class SSHDeviceAdapter(DeviceAdapter):
             src (str): Source file (on host)
             dst (str): Destination (in container)
         """
-
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".tar", delete=False
-        ) as file:
-            total_files = make_tarfile(file, [src])
-            archive_path = file.name
-
-            remote_tmp_file = f"/tmp/{os.path.basename(file.name)}"
-
-            with SCPClient(self._client.get_transport()) as scp:
-                scp.put(archive_path, recursive=True, remote_path=remote_tmp_file)
-
-            self.assert_command(f"tar xvf '{remote_tmp_file}' -C '{dst}'")
+        with SCPClient(self._client.get_transport()) as scp:
+            scp.put(src, recursive=True, remote_path=dst)
 
     def cleanup(self, force: bool = False):
         """Cleanup the device. This will be called when the define is no longer needed"""
