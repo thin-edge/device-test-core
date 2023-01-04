@@ -146,7 +146,7 @@ class SSHDeviceAdapter(DeviceAdapter):
 
         use_sudo = self.use_sudo()
         if use_sudo:
-            run_cmd.append("sudo")
+            run_cmd.extend(["sudo", "-E"])
 
         if shell:
             run_cmd.extend(["/bin/bash", "-c"])
