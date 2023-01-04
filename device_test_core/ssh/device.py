@@ -151,6 +151,14 @@ class SSHDeviceAdapter(DeviceAdapter):
         if shell:
             run_cmd.extend(["/bin/bash", "-c"])
 
+        if self._env:
+            log.info("Setting environment variables")
+            envs = ["env"] + [
+                f"{key}={value}"
+                for key, value in self._env.items()
+            ]
+            run_cmd.extend(envs)
+
         if isinstance(cmd, (list, tuple)):
             run_cmd.extend(cmd)
         else:
@@ -159,10 +167,6 @@ class SSHDeviceAdapter(DeviceAdapter):
         tran = self._client.get_transport()
         timeout = kwargs.pop("timeout", 30)
         chan = tran.open_session(timeout=timeout)
-
-        if self._env:
-            log.info("Setting environment variables")
-            chan.update_environment(self._env)
 
         chan.get_pty()
         f = chan.makefile()
@@ -184,7 +188,7 @@ class SSHDeviceAdapter(DeviceAdapter):
         if log_output:
             logging.info(
                 "cmd: %s, exit code: %d, stdout:\n%s",
-                run_cmd,
+                cmd,
                 exit_code,
                 output.decode("utf-8"),
             )
