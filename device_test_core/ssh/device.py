@@ -150,10 +150,7 @@ class SSHDeviceAdapter(DeviceAdapter):
 
         if self._env:
             log.info("Setting environment variables")
-            envs = ["env"] + [
-                f"{key}={value}"
-                for key, value in self._env.items()
-            ]
+            envs = ["env"] + [f"{key}={value}" for key, value in self._env.items()]
             run_cmd.extend(envs)
 
         if shell:
