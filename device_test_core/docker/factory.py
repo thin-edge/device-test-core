@@ -2,6 +2,8 @@
 
 import logging
 import os
+import shutil
+import subprocess
 import time
 from typing import Dict, Optional, Union
 import dotenv
@@ -16,11 +18,39 @@ from device_test_core.docker.device import DockerDeviceAdapter, DeviceAdapter
 log = logging.getLogger()
 
 
+def get_docker_host() -> Optional[str]:
+    """Get the docker host from the current docker cli context"""
+    docker_cli = shutil.which("docker")
+    if not docker_cli:
+        return
+
+    output = subprocess.check_output(
+        [
+            docker_cli,
+            "context",
+            "inspect",
+            "--format",
+            r"{{.Endpoints.docker.Host}}",
+        ]
+    )
+    docker_host = output.decode("utf8")
+    return docker_host
+
+
 class DockerDeviceFactory:
     """Docker device factory"""
 
     def __init__(self, keep_containers=False, force_network_recreate: bool = False):
-        self._docker_client = docker.from_env()
+        env = os.environ.copy()
+
+        # Lookup default docker context using the docker cli (if installed)
+        # Then set the DOCKER_HOST variable so the API behaves similar to the context
+        if "DOCKER_HOST" not in env:
+            docker_host = get_docker_host()
+            if docker_host:
+                env["DOCKER_HOST"] = docker_host
+
+        self._docker_client = docker.from_env(environment=env)
         self._network_name = os.environ.get("INTTEST_NETWORK", "inttest-network")
         self._force_network_recreate = force_network_recreate
         self._keep_containers = keep_containers
