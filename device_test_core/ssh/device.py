@@ -287,12 +287,10 @@ class SSHDeviceAdapter(DeviceAdapter):
             dst (str): Destination (in container)
         """
 
-        files = []
-        source_dir = _parse_base_path_from_pattern(src)
-
-        for match in glob.glob(src):
-            dst_path = match[len(source_dir) :].lstrip("/")
-            files.append(dst_path)
+        files = [
+            match
+            for match in glob.glob(src)
+        ]
 
         if not files:
             return
