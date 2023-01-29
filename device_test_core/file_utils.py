@@ -39,7 +39,10 @@ def make_tarfile(
             source_dir = _parse_base_path_from_pattern(pattern)
 
             for match in glob.glob(pattern):
-                archive_path = match[len(source_dir) :].lstrip("/")
+                if match == source_dir:
+                    archive_path = os.path.basename(match)
+                else:
+                    archive_path = match[len(source_dir) :].lstrip("/")
                 log.debug("Adding file: path=%s, archive_path=%s", match, archive_path)
                 tar.add(match, arcname=archive_path)
                 total_files += 1

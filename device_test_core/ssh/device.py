@@ -267,17 +267,7 @@ class SSHDeviceAdapter(DeviceAdapter):
         Returns:
             str: Device id
         """
-        code, output = self.execute_command("tedge config get device.id")
-        if code != 0:
-            raise Exception(
-                "Failed to get device id. container: "
-                f"name={self.container.name}, id={self.container.id}, "
-                f"code={code}, output={output}"
-            )
-        device_id = output.strip().decode("utf-8")
-
-        logging.info("Device id: %s", device_id)
-        return device_id
+        return self._device_id
 
     def use_sudo(self) -> bool:
         return True
@@ -300,7 +290,7 @@ class SSHDeviceAdapter(DeviceAdapter):
                 total_files = make_tarfile(file, [src])
                 archive_path = file.name
 
-            if total_files > 1 or dst.endswith("/"):
+            if total_files > 1 or dst.endswith("/") or dst in [".", ".."]:
                 parent_dir = dst.rstrip("/") + "/"
             else:
                 parent_dir = os.path.dirname(dst)
@@ -311,7 +301,9 @@ class SSHDeviceAdapter(DeviceAdapter):
                 scp.put(archive_path, recursive=True, remote_path=tmp_dst)
 
             self.assert_command(f"mkdir -p '{parent_dir}'")
-            self.assert_command(f"tar xzf '{tmp_dst}' -C / '{parent_dir}'")
+            self.assert_command(
+                f"tar xf '{tmp_dst}' -C '{parent_dir}' && rm -f '{tmp_dst}'"
+            )
 
         finally:
             if archive_path and os.path.exists(archive_path):
