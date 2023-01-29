@@ -297,8 +297,8 @@ class SSHDeviceAdapter(DeviceAdapter):
 
             # copy archive to device
             tmp_dst = f"/tmp/{Path(archive_path).name}"
-            with SCPClient(self._client.get_transport()) as scp:
-                scp.put(archive_path, recursive=True, remote_path=tmp_dst)
+            with SCPClient(self._client.get_transport()) as scp_client:
+                scp_client.put(archive_path, recursive=True, remote_path=tmp_dst)
 
             self.assert_command(f"mkdir -p '{parent_dir}'")
             self.assert_command(
