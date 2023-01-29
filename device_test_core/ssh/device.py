@@ -1,12 +1,15 @@
 """SSH Device Adapter"""
-import logging
-from typing import Any, Tuple, Dict, Optional
 import glob
+import logging
+import os
 import shlex
+import tempfile
 import time
+from pathlib import Path
+from typing import Any, Tuple, Dict, Optional
 from datetime import datetime, timezone, timedelta
 from device_test_core.adapter import DeviceAdapter
-from device_test_core.file_utils import _parse_base_path_from_pattern
+from device_test_core.file_utils import make_tarfile
 
 
 try:
@@ -286,17 +289,33 @@ class SSHDeviceAdapter(DeviceAdapter):
             src (str): Source file (on host)
             dst (str): Destination (in container)
         """
+        try:
+            total_files = 0
+            archive_path = ""
 
-        files = [
-            match
-            for match in glob.glob(src)
-        ]
+            # build archive
+            with tempfile.NamedTemporaryFile(
+                mode="wb", suffix=".tar", delete=False
+            ) as file:
+                total_files = make_tarfile(file, [src])
+                archive_path = file.name
 
-        if not files:
-            return
+            if total_files > 1 or dst.endswith("/"):
+                parent_dir = dst.rstrip("/") + "/"
+            else:
+                parent_dir = os.path.dirname(dst)
 
-        with SCPClient(self._client.get_transport()) as scp:
-            scp.put(files, recursive=True, remote_path=dst)
+            # copy archive to device
+            tmp_dst = f"/tmp/{Path(archive_path).name}"
+            with SCPClient(self._client.get_transport()) as scp:
+                scp.put(archive_path, recursive=True, remote_path=tmp_dst)
+
+            self.assert_command(f"mkdir -p '{parent_dir}'")
+            self.assert_command(f"tar xzf '{tmp_dst}' -C / '{parent_dir}'")
+
+        finally:
+            if archive_path and os.path.exists(archive_path):
+                os.unlink(archive_path)
 
     def cleanup(self, force: bool = False):
         """Cleanup the device. This will be called when the define is no longer needed"""
