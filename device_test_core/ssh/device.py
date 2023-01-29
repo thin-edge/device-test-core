@@ -298,7 +298,7 @@ class SSHDeviceAdapter(DeviceAdapter):
             return
 
         with SCPClient(self._client.get_transport()) as scp:
-            scp.put(src, recursive=True, remote_path=dst)
+            scp.put(files, recursive=True, remote_path=dst)
 
     def cleanup(self, force: bool = False):
         """Cleanup the device. This will be called when the define is no longer needed"""
