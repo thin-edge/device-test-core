@@ -1,14 +1,12 @@
 """SSH Device Adapter"""
 import logging
 from typing import Any, Tuple, Dict, Optional
-import os
+import glob
 import shlex
 import time
-import tempfile
 from datetime import datetime, timezone, timedelta
-from docker.models.containers import Container
 from device_test_core.adapter import DeviceAdapter
-from device_test_core.file_utils import make_tarfile
+from device_test_core.file_utils import _parse_base_path_from_pattern
 
 
 try:
@@ -288,6 +286,17 @@ class SSHDeviceAdapter(DeviceAdapter):
             src (str): Source file (on host)
             dst (str): Destination (in container)
         """
+
+        files = []
+        source_dir = _parse_base_path_from_pattern(src)
+
+        for match in glob.glob(src):
+            dst_path = match[len(source_dir) :].lstrip("/")
+            files.append(dst_path)
+
+        if not files:
+            return
+
         with SCPClient(self._client.get_transport()) as scp:
             scp.put(src, recursive=True, remote_path=dst)
 
