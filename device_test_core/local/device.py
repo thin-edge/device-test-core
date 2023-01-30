@@ -1,40 +1,20 @@
-"""SSH Device Adapter"""
-import glob
+"""Local Device Adapter"""
 import logging
 import os
-import shlex
+import subprocess
 import tempfile
 import time
-from pathlib import Path
 from typing import Any, Tuple, Dict, Optional
 from datetime import datetime, timezone, timedelta
 from device_test_core.adapter import DeviceAdapter
 from device_test_core.file_utils import make_tarfile
 
 
-try:
-    import paramiko
-except ImportError:
-    raise ImportError(
-        "Importing Paramiko library failed. " "Make sure you have Paramiko installed."
-    )
-
-from paramiko.client import SSHClient
-
-try:
-    import scp
-    from scp import SCPClient
-except ImportError:
-    raise ImportError(
-        "Importing SCP library failed. " "Make sure you have SCP installed."
-    )
-
-
 log = logging.getLogger(__name__)
 
 
-class SSHDeviceAdapter(DeviceAdapter):
-    """SSH connected Device"""
+class LocalDeviceAdapter(DeviceAdapter):
+    """Local device"""
 
     # pylint: disable=too-many-public-methods
 
@@ -48,9 +28,7 @@ class SSHDeviceAdapter(DeviceAdapter):
     ):
         super().__init__(name, device_id, should_cleanup=should_cleanup, config=config)
         self._env = env or {}
-        self._client = SSHClient()
-        self._client.load_system_host_keys()
-        self._connect()
+        self._adapter = "local"
 
     @property
     def is_existing_device(self) -> bool:
@@ -115,20 +93,14 @@ class SSHDeviceAdapter(DeviceAdapter):
         Returns:
             Optional[Any]: Device stats object
         """
-        raise NotImplementedError("Device statistics is not supported when using SSH")
-
-    def _connect(self):
-        hostname = self._config.get("hostname")
-        username = self._config.get("username", None)
-        password = self._config.get("password", None)
-
-        assert hostname, "Missing hostname from adapter configuration"
-        self._client.connect(hostname, username=username, password=password)
+        raise NotImplementedError(
+            f"Device statistics is not supported when using {self._adapter}"
+        )
 
     def execute_command(
         self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
     ) -> Tuple[int, Any]:
-        """Execute a command
+        """Execute a command inside the docker container
 
         Args:
             cmd (str): Command to execute
@@ -137,10 +109,10 @@ class SSHDeviceAdapter(DeviceAdapter):
             **kwargs (Any, optional): Additional keyword arguments
 
         Raises:
-            Exception: Device not found error
+            Exception: Docker container not found error
 
         Returns:
-            Tuple[int, Any]: Command output (exit_code, output)
+            Tuple[int, Any]: Docker command output (exit_code, output)
         """
         run_cmd = []
 
@@ -161,27 +133,16 @@ class SSHDeviceAdapter(DeviceAdapter):
         else:
             run_cmd.append(cmd)
 
-        tran = self._client.get_transport()
         timeout = kwargs.pop("timeout", 120)
-        chan = tran.open_session(timeout=timeout)
 
-        chan.get_pty()
-        f = chan.makefile()
-        chan.exec_command(shlex.join(run_cmd))
-        output = f.read()
+        proc = subprocess.Popen(
+            run_cmd,
+            stdout=subprocess.PIPE,
+        )
 
-        # Note: Replace the \r which are added to due the simulated terminal
-        # https://stackoverflow.com/questions/35887380/why-does-paramiko-returns-r-n-as-newline-instead-of-n
-        output = output.replace(b"\r\n", b"\n")
-        # Check exist status after calling read, otherwise it hangs
-        # https://github.com/paramiko/paramiko/issues/448
-        exit_code = chan.recv_exit_status()
-        f.close()
+        exit_code = proc.wait(timeout)
+        output = proc.stdout.read()
 
-        # Option 2: Use more simple approach, but the stdout and stderr is separated
-        # stdin, stdout, stderr = self._client.exec_command(shlex.join(cmd))
-        # exit_code = stdout.channel.recv_exit_status()
-        # output = "\n".join(stdout.readlines())
         if log_output:
             logging.info(
                 "cmd: %s, exit code: %d, stdout:\n%s",
@@ -291,15 +252,8 @@ class SSHDeviceAdapter(DeviceAdapter):
             else:
                 parent_dir = os.path.dirname(dst)
 
-            # copy archive to device
-            tmp_dst = f"/tmp/{Path(archive_path).name}"
-            with SCPClient(self._client.get_transport()) as scp_client:
-                scp_client.put(archive_path, recursive=True, remote_path=tmp_dst)
-
             self.assert_command(f"mkdir -p '{parent_dir}'")
-            self.assert_command(
-                f"tar xf '{tmp_dst}' -C '{parent_dir}' && rm -f '{tmp_dst}'"
-            )
+            self.assert_command(f"tar xf '{archive_path}' -C '{parent_dir}'")
 
         finally:
             if archive_path and os.path.exists(archive_path):
@@ -310,6 +264,3 @@ class SSHDeviceAdapter(DeviceAdapter):
         if not force and not self.should_cleanup:
             log.info("Skipping cleanup due to should_cleanup not being set")
             return
-
-        if self._client:
-            self._client.close()
