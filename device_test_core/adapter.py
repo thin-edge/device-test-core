@@ -147,7 +147,7 @@ class DeviceAdapter(ABC):
         Returns:
             List[str]: List of log entries
         """
-        cmd = "journalctl --lines 100000 --no-pager -u 'tedge*' -u 'c8y*' -u mosquitto"
+        cmd = "journalctl --lines 100000 --no-pager -u 'tedge*' -u 'c8y*' -u mosquitto -u 'mqtt-logger'"
 
         since = since if since is not None else self.test_start_time
         output = []
