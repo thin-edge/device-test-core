@@ -29,6 +29,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+all = [
+    "device-test-core[ssh]",
+    "device-test-core[docker]",
+    "device-test-core[local]",
+]
 ssh = [
     "paramiko >= 2.12.0, < 2.13.0",
     "scp >= 0.14.4, < 0.15.0",
