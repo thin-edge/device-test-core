@@ -1,25 +1,44 @@
 [build-system]
 requires = [
-    "setuptools>=45",
+    "setuptools>=61",
     "wheel",
-    "setuptools_scm>=6.2",
+    "setuptools-scm[toml]>=6.2",
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "device_test_core/_version.py"
 
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
+
 [project]
 name = "device_test_core"
-description = "Core test library for Cumulocity IoT"
-requires-python = ">=3.8"
+description = "Device test library"
+requires-python = ">=3.7"
 keywords = ["device", "testing"]
-license = {text = "MPL-2.0"}
+license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
 ]
-dynamic = ["version", "dependencies", "readme"]
+dynamic = ["version", "readme"]
+dependencies = [
+  "python-dotenv >= 0.20.0, < 0.21.0",
+  "randomname >= 0.1.5, < 0.2.0",
+  "tenacity >= 8.1.0, < 9.0.0",
+]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
-readme = {file = ["README.md"]}
+[project.optional-dependencies]
+all = [
+    "device-test-core[ssh]",
+    "device-test-core[docker]",
+    "device-test-core[local]",
+]
+ssh = [
+    "paramiko >= 2.12.0, < 2.13.0",
+    "scp >= 0.14.4, < 0.15.0",
+]
+local = []
+docker = [
+    "docker >= 6.0.1, < 6.1.0"
+]
