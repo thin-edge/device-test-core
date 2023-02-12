@@ -9,8 +9,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 write_to = "device_test_core/_version.py"
 
-[tool.setuptools.dynamic]
-readme = {file = ["README.md"]}
+#[tool.setuptools.dynamic]
+#readme = {file = ["README.md"]}
 
 [project]
 name = "device_test_core"
