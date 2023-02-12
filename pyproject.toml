@@ -1,3 +1,17 @@
+[build-system]
+requires = [
+    "setuptools>=45",
+    "wheel",
+    "setuptools_scm>=6.2",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "device_test_core/_version.py"
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
+
 [project]
 name = "device_test_core"
 description = "Device test library"
@@ -28,17 +42,3 @@ local = []
 docker = [
     'docker >= 6.0.1, < 6.1.0'
 ]
-
-[build-system]
-requires = [
-    "setuptools>=45",
-    "wheel",
-    "setuptools_scm>=6.2",
-]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools_scm]
-write_to = "device_test_core/_version.py"
-
-[tool.setuptools.dynamic]
-readme = {file = ["README.md"]}
