@@ -23,9 +23,10 @@ classifiers = [
 ]
 dynamic = ["version", "dependencies", "readme"]
 dependencies = [
-  "python-dotenv >= 0.20.0, < 0.21.0",
-  "randomname >= 0.1.5, < 0.2.0",
-  "tenacity >= 8.1.0, < 9.0.0",
+    "python-dotenv",
+  #"python-dotenv >= 0.20.0, < 0.21.0",
+  #"randomname >= 0.1.5, < 0.2.0",
+  #"tenacity >= 8.1.0, < 9.0.0",
 ]
 
 [project.optional-dependencies]
