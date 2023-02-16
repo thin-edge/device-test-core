@@ -348,7 +348,10 @@ class DockerDeviceFactory:
                 logging.info("Connected [%s] to network [%s]", name, self._network.name)
             except APIError as ex:
                 # Ignore errors if the network is already attached
-                if "already exists in network" not in ex.explanation:
+                if (
+                    "already exists in network" not in ex.explanation
+                    and "already connected to network" not in ex.explanation
+                ):
                     raise
                 logging.info(
                     "Container [%s] already connected to network [%s]",
@@ -375,7 +378,10 @@ class DockerDeviceFactory:
                     self._network.name,
                 )
             except APIError as ex:
-                if "is not connected to network" not in ex.explanation:
+                if (
+                    "is not connected to network" not in ex.explanation
+                    and "is not connected" not in ex.explanation
+                ):
                     raise
                 logging.info(
                     "Container [%s] already disconnected from network [%s]",
