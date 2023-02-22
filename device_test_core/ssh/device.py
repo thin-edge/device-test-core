@@ -191,37 +191,6 @@ class SSHDeviceAdapter(DeviceAdapter):
             )
         return exit_code, output
 
-    def assert_command(
-        self, cmd: str, exp_exit_code: int = 0, log_output: bool = True, **kwargs
-    ) -> Any:
-        """Execute a command
-
-        Args:
-            cmd (str): Command to execute
-            log_output (bool, optional): Log the stdout after the command has executed
-            exp_exit_code (int, optional): Expected exit code, defaults to 0.
-                Ignored if set to None.
-            **kwargs (Any, optional): Additional keyword arguments
-
-        Raises:
-            Exception: Device not found error
-
-        Returns:
-            Any: Command output
-        """
-        exit_code, output = self.execute_command(cmd, log_output=log_output, **kwargs)
-
-        if exp_exit_code is not None:
-            cmd_snippet = cmd
-            if len(cmd_snippet) > 30:
-                cmd_snippet = cmd_snippet[0:30] + "..."
-
-            assert (
-                exit_code == exp_exit_code
-            ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
-
-        return output
-
     @property
     def name(self) -> str:
         """Get the name of the device

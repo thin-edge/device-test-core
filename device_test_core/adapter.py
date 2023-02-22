@@ -1,6 +1,6 @@
 """Device adapter"""
 import logging
-from typing import List, Any, Tuple, Dict, Optional
+from typing import List, Any, Tuple, Dict, Optional, Union
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
 
@@ -84,14 +84,15 @@ class DeviceAdapter(ABC):
         """
 
     def assert_command(
-        self, cmd: str, exp_exit_code: int = 0, log_output: bool = True, **kwargs
+        self, cmd: str, exp_exit_code: Union[int, str] = 0, log_output: bool = True, **kwargs
     ) -> Any:
         """Execute a command inside the docker container
 
         Args:
             cmd (str): Command to execute
             log_output (bool, optional): Log the stdout after the command has executed
-            exp_exit_code (int, optional): Expected exit code, defaults to 0.
+            exp_exit_code (Union[int, str], optional): Expected exit code, defaults to 0.
+                You can use '!0' to invert the check, to assume it is not equal to 0.
             **kwargs (Any, optional): Additional keyword arguments
 
         Returns:
@@ -104,9 +105,14 @@ class DeviceAdapter(ABC):
             if len(cmd_snippet) > 30:
                 cmd_snippet = cmd_snippet[0:30] + "..."
 
-            assert (
-                exit_code == exp_exit_code
-            ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
+            if isinstance(exp_exit_code, str) and exp_exit_code.startswith("!"):
+                assert (
+                    exit_code != int(exp_exit_code[1:].strip())
+                ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
+            else:
+                assert (
+                    exit_code == exp_exit_code
+                ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
 
         return output
 
