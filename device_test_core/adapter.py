@@ -105,13 +105,19 @@ class DeviceAdapter(ABC):
             if len(cmd_snippet) > 30:
                 cmd_snippet = cmd_snippet[0:30] + "..."
 
-            if isinstance(exp_exit_code, str) and exp_exit_code.startswith("!"):
+            try:
+                # Coerce to integer if it is digit like
+                expected_exit_code = int(exp_exit_code)
+            except ValueError:
+                expected_exit_code = exp_exit_code
+
+            if isinstance(expected_exit_code, str) and expected_exit_code.startswith("!"):
                 assert (
-                    exit_code != int(exp_exit_code[1:].strip())
+                    exit_code != int(expected_exit_code[1:].strip())
                 ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
             else:
                 assert (
-                    exit_code == exp_exit_code
+                    exit_code == expected_exit_code
                 ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
 
         return output
