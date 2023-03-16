@@ -1,3 +1,5 @@
+"""General utilities"""
+from typing import Any
 import randomname
 
 
@@ -15,3 +17,23 @@ def generate_name(prefix: str = None, sep="_") -> str:
     if prefix:
         return sep.join([prefix, name])
     return name
+
+
+def to_str(value: Any, encoding: str = "utf8") -> str:
+    """Convert a value to a string. If the input is bytes, then decode it
+    using the given encoding.
+
+    Args:
+        value (Any): Input to be decoded to a string
+        encoding (str): Encoding if the input is bytes. Defaults to utf8
+
+    Returns:
+        str: value decoded as a string
+    """
+    if hasattr(value, "decode"):
+        return value.decode(encoding)
+
+    if not value:
+        return ""
+
+    return str(value)

@@ -1,8 +1,13 @@
 """Device adapter"""
 import logging
-from typing import List, Any, Tuple, Dict, Optional, Union
+from typing import List, Any, Dict, Optional, Union
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
+from device_test_core.utils import to_str
+from device_test_core.command import CmdOutput
+
+
+log = logging.getLogger(__name__)
 
 
 class DeviceAdapter(ABC):
@@ -17,15 +22,17 @@ class DeviceAdapter(ABC):
         name: str,
         device_id: str = None,
         should_cleanup: bool = None,
+        use_sudo: bool = True,
         config: Dict[str, Any] = None,
     ):
         self._name = name
         self._device_id = (
             device_id or name
-        )  # Default ot using name if device_id is empty
+        )  # Default to using name if device_id is empty
         self._start_time = None
         self._test_start_time = datetime.now(timezone.utc)
         self._is_existing_device = False
+        self._use_sudo = use_sudo
         self._config = config
         self._should_cleanup = should_cleanup
 
@@ -67,10 +74,18 @@ class DeviceAdapter(ABC):
         """
         return (datetime.now(timezone.utc) - self.start_time).total_seconds()
 
+    def use_sudo(self) -> bool:
+        """Use sudo
+
+        Returns:
+            bool: True if the command should be run using sudo
+        """
+        return self._use_sudo
+
     @abstractmethod
     def execute_command(
         self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
-    ) -> Tuple[int, Any]:
+    ) -> CmdOutput:
         """Execute a command inside the docker container
 
         Args:
@@ -80,12 +95,16 @@ class DeviceAdapter(ABC):
             **kwargs (Any, optional): Additional keyword arguments
 
         Returns:
-            Tuple[int, Any]: Docker command output (exit_code, output)
+            CmdOutput: Command output details, e.g. stdout, stderr and return_code
         """
 
     def assert_command(
-        self, cmd: str, exp_exit_code: Union[int, str] = 0, log_output: bool = True, **kwargs
-    ) -> Any:
+        self,
+        cmd: str,
+        exp_exit_code: Union[int, str] = 0,
+        log_output: bool = True,
+        **kwargs,
+    ) -> CmdOutput:
         """Execute a command inside the docker container
 
         Args:
@@ -96,9 +115,9 @@ class DeviceAdapter(ABC):
             **kwargs (Any, optional): Additional keyword arguments
 
         Returns:
-            Any: Command output
+            CmdOutput: Command output
         """
-        exit_code, output = self.execute_command(cmd, log_output=log_output, **kwargs)
+        result = self.execute_command(cmd, log_output=log_output, **kwargs)
 
         if exp_exit_code is not None:
             cmd_snippet = cmd
@@ -111,16 +130,18 @@ class DeviceAdapter(ABC):
             except ValueError:
                 expected_exit_code = exp_exit_code
 
-            if isinstance(expected_exit_code, str) and expected_exit_code.startswith("!"):
-                assert (
-                    exit_code != int(expected_exit_code[1:].strip())
-                ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
+            if isinstance(expected_exit_code, str) and expected_exit_code.startswith(
+                "!"
+            ):
+                assert result.return_code != int(
+                    expected_exit_code[1:].strip()
+                ), f"`{cmd_snippet}` returned an unexpected exit code\nstdout:\n{to_str(result.stdout)}\nstderr:\n{to_str(result.stderr)}"
             else:
                 assert (
-                    exit_code == expected_exit_code
-                ), f"`{cmd_snippet}` returned an unexpected exit code\nOutput:\n{output.decode('utf8')}"
+                    result.return_code == expected_exit_code
+                ), f"`{cmd_snippet}` returned an unexpected exit code\nstdout:\n{to_str(result.stdout)}\nstderr:\n{to_str(result.stderr)}"
 
-        return output
+        return result
 
     @property
     def name(self) -> str:
@@ -133,7 +154,7 @@ class DeviceAdapter(ABC):
 
     def restart(self):
         """Restart device"""
-        logging.info("Restarting %s", self.name)
+        log.info("Restarting %s", self.name)
         self.execute_command("shutdown -r now")
 
     @abstractmethod
@@ -168,15 +189,15 @@ class DeviceAdapter(ABC):
                 # use linux timestamp as it it simplifies the datetime/timezone parsing
                 since = f"@{int(since.timestamp())}"
             cmd += f' --since "{since}"'
-        exit_code, logs = self.execute_command(cmd, log_output=False)
+        result = self.execute_command(cmd, log_output=False)
 
-        if exit_code != 0:
-            logging.warning(
+        if result.return_code != 0:
+            log.warning(
                 "Could not retrieve journalctl logs. cmd=%d, exit_code=%d",
                 cmd,
-                exit_code,
+                result.return_code,
             )
-        output.extend(logs.decode("utf8").splitlines())
+        output.extend(to_str(result.stdout).splitlines())
 
         return output
 

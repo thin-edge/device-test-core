@@ -4,10 +4,12 @@ import os
 import subprocess
 import tempfile
 import time
-from typing import Any, Tuple, Dict, Optional
+from typing import Any, Dict, Optional
 from datetime import datetime, timezone, timedelta
 from device_test_core.adapter import DeviceAdapter
 from device_test_core.file_utils import make_tarfile
+from device_test_core.utils import to_str
+from device_test_core.command import CmdOutput
 
 
 log = logging.getLogger(__name__)
@@ -24,9 +26,16 @@ class LocalDeviceAdapter(DeviceAdapter):
         device_id: str = None,
         env: Dict[str, str] = None,
         should_cleanup: bool = None,
+        use_sudo: bool = True,
         config: Dict[str, Any] = None,
     ):
-        super().__init__(name, device_id, should_cleanup=should_cleanup, config=config)
+        super().__init__(
+            name,
+            device_id,
+            should_cleanup=should_cleanup,
+            use_sudo=use_sudo,
+            config=config,
+        )
         self._env = env or {}
         self._adapter = "local"
 
@@ -73,8 +82,8 @@ class LocalDeviceAdapter(DeviceAdapter):
         Returns:
             datetime: Device start time. None if the device does not exist
         """
-        output = self.assert_command("awk '{print $1}' /proc/uptime")
-        uptime = int(float(output.decode("utf-8").strip()))
+        result = self.assert_command("awk '{print $1}' /proc/uptime")
+        uptime = int(float(result.stdout.strip()))
         return datetime.now(timezone.utc) - timedelta(seconds=uptime)
 
     def get_uptime(self) -> float:
@@ -99,7 +108,7 @@ class LocalDeviceAdapter(DeviceAdapter):
 
     def execute_command(
         self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
-    ) -> Tuple[int, Any]:
+    ) -> CmdOutput:
         """Execute a command inside the docker container
 
         Args:
@@ -112,11 +121,11 @@ class LocalDeviceAdapter(DeviceAdapter):
             Exception: Docker container not found error
 
         Returns:
-            Tuple[int, Any]: Docker command output (exit_code, output)
+            CmdOutput: Command output details, e.g. stdout, stderr and return_code
         """
         run_cmd = []
 
-        use_sudo = self.use_sudo()
+        use_sudo = kwargs.pop("sudo", self.use_sudo())
         if use_sudo:
             run_cmd.extend(["sudo", "-E"])
 
@@ -138,19 +147,22 @@ class LocalDeviceAdapter(DeviceAdapter):
         proc = subprocess.Popen(
             run_cmd,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
 
         exit_code = proc.wait(timeout)
-        output = proc.stdout.read()
+        stdout = proc.stdout.read()
+        stderr = proc.stdout.read()
 
         if log_output:
-            logging.info(
-                "cmd: %s, exit code: %d, stdout:\n%s",
+            log.info(
+                "cmd: %s, exit code: %d\nstdout:\n%sstderr:\n%s",
                 cmd,
                 exit_code,
-                output.decode("utf-8"),
+                to_str(stdout) or "<<empty>>",
+                to_str(stderr) or "<<empty>>",
             )
-        return exit_code, output
+        return CmdOutput(stdout=stdout, stderr=stderr, return_code=exit_code)
 
     @property
     def name(self) -> str:
@@ -163,7 +175,7 @@ class LocalDeviceAdapter(DeviceAdapter):
 
     def restart(self):
         """Restart device"""
-        logging.info("Restarting %s", self.name)
+        log.info("Restarting %s", self.name)
         self.assert_command("shutdown -r now")
         time.sleep(120)  # Wait for system to go down (incase it gets this far)
         raise Exception("System did not restart")
@@ -194,9 +206,6 @@ class LocalDeviceAdapter(DeviceAdapter):
             str: Device id
         """
         return self._device_id
-
-    def use_sudo(self) -> bool:
-        return True
 
     def copy_to(self, src: str, dst: str):
         """Copy file to the device

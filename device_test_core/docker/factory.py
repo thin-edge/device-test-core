@@ -60,7 +60,7 @@ class DockerDeviceFactory:
         if self._network is None:
             raise Exception(f"Could not get or create network {self._network_name}")
 
-        logging.info(
+        log.info(
             "Initialized docker device. network: name=%s, id=%s",
             self._network.name,
             self._network.id,
@@ -77,13 +77,11 @@ class DockerDeviceFactory:
                     try:
                         network.disconnect(container, force=True)
                     except Exception as ex:
-                        logging.warning(
-                            "Could not disconnect container. exception=%s", ex
-                        )
+                        log.warning("Could not disconnect container. exception=%s", ex)
             except Exception as ex:
-                logging.warning("Could not access network containers. exception=%s", ex)
+                log.warning("Could not access network containers. exception=%s", ex)
             network.remove()
-            logging.info("Removed network: %s", self._network_name)
+            log.info("Removed network: %s", self._network_name)
             network = None
 
         if network is None:
@@ -133,13 +131,13 @@ class DockerDeviceFactory:
         Returns:
             DeviceAdapter: The device adapter
         """
-        logging.info("Using container image: %s", image)
+        log.info("Using container image: %s", image)
         env_options = dotenv.dotenv_values(env_file) or {}
         env_options["DEVICE_ID"] = device_id
         env_options["DEVICE_TYPE"] = device_type
 
         if env is not None:
-            logging.info("Using custom environment settings. %s", env)
+            log.info("Using custom environment settings. %s", env)
             env_options = {**env_options, **env}
 
         options = {
@@ -170,7 +168,7 @@ class DockerDeviceFactory:
             "privileged": True,
         }
 
-        logging.info(
+        log.info(
             "Creating new container [%s] with device type [%s]", device_id, device_type
         )
 
@@ -198,12 +196,12 @@ class DockerDeviceFactory:
             name = container
             container = self.get_container_by_name(name)
             if container is None:
-                logging.info(
+                log.info(
                     "Container does not exist, so no need to remove it. name=%s", name
                 )
                 return
 
-        logging.info(
+        log.info(
             "Found existing container. alias=%s, name=%s, id=%s",
             alias,
             container.name,
@@ -211,22 +209,20 @@ class DockerDeviceFactory:
         )
         try:
             self.disconnect_network(container)
-            logging.info("Disconnected container from the network")
+            log.info("Disconnected container from the network")
         except Exception as ex:
-            logging.warning(
-                "Could not remove container from the network. exception=%s", ex
-            )
+            log.warning("Could not remove container from the network. exception=%s", ex)
 
         try:
             container.remove(force=True)
-            logging.info(
+            log.info(
                 "Removed existing container [alias=%s, name=%s, id=%s]",
                 alias,
                 container.name,
                 container.id,
             )
         except Exception as ex:
-            logging.error("Failed to remove container. exception=%s", ex)
+            log.error("Failed to remove container. exception=%s", ex)
 
     def _find_network(self, name: str) -> Optional[Network]:
         """Find network by name
@@ -255,7 +251,7 @@ class DockerDeviceFactory:
         network = self._network
 
         if network is None:
-            logging.info("Network object is empty")
+            log.info("Network object is empty")
             return False
 
         retries = 5
@@ -266,14 +262,14 @@ class DockerDeviceFactory:
                 network_containers = network.containers
                 break
             except NotFound as ex:
-                logging.debug("Could not get container list. exception=%s", ex)
+                log.debug("Could not get container list. exception=%s", ex)
 
             # Wait in case api is busy
             time.sleep(0.25)
             retries -= 1
 
         if network_containers is None:
-            logging.warning(
+            log.warning(
                 "Could not get list of containers on the network. name=%s",
                 self._network_name,
             )
@@ -287,7 +283,7 @@ class DockerDeviceFactory:
                     found = True
                     break
             except NotFound as ex:
-                logging.warning("Could not find container. exception=%s", ex)
+                log.warning("Could not find container. exception=%s", ex)
         return found
 
     @classmethod
@@ -312,7 +308,7 @@ class DockerDeviceFactory:
         while time.time() < timeout_limit:
             container.reload()
             if container.status == "running":
-                logging.info(
+                log.info(
                     "Container ready: name=%s, id=%s, duration=%.3f, retries=%d",
                     container.name,
                     container.id,
@@ -345,15 +341,16 @@ class DockerDeviceFactory:
                 # Try connecting the container, and ignore already exists network
                 # as checking if it is already connected is unreliable
                 self._network.connect(container)
-                logging.info("Connected [%s] to network [%s]", name, self._network.name)
+                log.info("Connected [%s] to network [%s]", name, self._network.name)
             except APIError as ex:
                 # Ignore errors if the network is already attached
                 if (
                     "already exists in network" not in ex.explanation
                     and "already connected to network" not in ex.explanation
                 ):
+                    log.error("Could not connect container to network. %s", ex)
                     raise
-                logging.info(
+                log.info(
                     "Container [%s] already connected to network [%s]",
                     name,
                     self._network.name,
@@ -372,7 +369,7 @@ class DockerDeviceFactory:
         if container and self._network:
             try:
                 self._network.disconnect(container, force=True)
-                logging.info(
+                log.info(
                     "Disconnected [%s] from network [%s]",
                     container.name,
                     self._network.name,
@@ -383,7 +380,7 @@ class DockerDeviceFactory:
                     and "is not connected" not in ex.explanation
                 ):
                     raise
-                logging.info(
+                log.info(
                     "Container [%s] already disconnected from network [%s]",
                     container.name,
                     self._network.name,
@@ -423,7 +420,7 @@ class DockerDeviceFactory:
 
     def remove_container_devices(self, group_id: str = ""):
         """Remove the containers related to the integration testing"""
-        logging.info("Removing all pre-existing docker device containers")
+        log.info("Removing all pre-existing docker device containers")
         labels = ["device.inttest=1"]
         if group_id:
             labels.append(f"device.test_group_id={group_id}")
@@ -435,7 +432,5 @@ class DockerDeviceFactory:
             },
         )
         for container in containers:
-            logging.info(
-                "Removing container. name=%s, id=%s", container.name, container.id
-            )
+            log.info("Removing container. name=%s, id=%s", container.name, container.id)
             self.remove_device(container)

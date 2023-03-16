@@ -1,14 +1,15 @@
 """Docker Device Adapter"""
 import os
 import logging
-import glob
 import tempfile
-from typing import Any, Tuple, Optional
+from typing import Any, Optional
 import time
 from datetime import datetime, timezone
 from docker.models.containers import Container
 from device_test_core.adapter import DeviceAdapter
 from device_test_core.file_utils import make_tarfile
+from device_test_core.utils import to_str
+from device_test_core.command import CmdOutput
 
 
 log = logging.getLogger()
@@ -52,12 +53,19 @@ class DockerDeviceAdapter(DeviceAdapter):
         container=None,
         simulator=None,
         should_cleanup: bool = None,
+        use_sudo: bool = True,
         **kwargs,
     ):
         self._container = container
         self.simulator = simulator
         self._is_existing_device = False
-        super().__init__(name, device_id, should_cleanup=should_cleanup, config=kwargs)
+        super().__init__(
+            name,
+            device_id,
+            should_cleanup=should_cleanup,
+            use_sudo=use_sudo,
+            config=kwargs,
+        )
 
     @property
     def container(self) -> Container:
@@ -138,7 +146,7 @@ class DockerDeviceAdapter(DeviceAdapter):
 
     def execute_command(
         self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
-    ) -> Tuple[int, Any]:
+    ) -> CmdOutput:
         """Execute a command inside the docker container
 
         Args:
@@ -151,28 +159,36 @@ class DockerDeviceAdapter(DeviceAdapter):
             Exception: Docker container not found error
 
         Returns:
-            Tuple[int, Any]: Docker command output (exit_code, output)
+            CmdOutput: Command output details, e.g. stdout, stderr and return_code
         """
-        run_cmd = cmd
+        run_cmd = []
+
+        use_sudo = kwargs.pop("sudo", self.use_sudo())
+        if use_sudo:
+            run_cmd.extend(["sudo", "-E"])
 
         if shell:
             run_cmd = ["/bin/bash", "-c"]
-            if isinstance(cmd, (list, tuple)):
-                run_cmd.extend(cmd)
-            else:
-                run_cmd.append(cmd)
 
-        exit_code, output = self.container.exec_run(run_cmd)
+        if isinstance(cmd, (list, tuple)):
+            run_cmd.extend(cmd)
+        else:
+            run_cmd.append(cmd)
+
+        exit_code, output = self.container.exec_run(run_cmd, demux=True)
+        stdout, stderr = output
         if log_output:
             log.info(
-                "cmd: %s, exit code: %d, stdout:\n%s",
+                "cmd: %s, exit code: %d\nstdout:\n%s\nstdout:\n%s",
                 run_cmd,
                 exit_code,
-                output.decode("utf-8"),
+                to_str(stdout) or "<<empty>>",
+                to_str(stderr) or "<<empty>>",
             )
         else:
             log.info("cmd: %s, exit code: %d", run_cmd, exit_code)
-        return exit_code, output
+
+        return CmdOutput(stdout=stdout, stderr=stderr, return_code=exit_code)
 
     @property
     def name(self) -> str:
