@@ -265,8 +265,8 @@ class DockerDeviceAdapter(DeviceAdapter):
                 else:
                     parent_dir = os.path.dirname(dst)
 
-                code, _ = self.execute_command(f"mkdir -p {parent_dir}")
-                assert code == 0
+                result = self.execute_command(f"mkdir -p {parent_dir}")
+                assert result.return_code == 0
                 self.container.put_archive(parent_dir, file)
         finally:
             if archive_path and os.path.exists(archive_path):
