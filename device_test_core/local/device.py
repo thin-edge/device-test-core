@@ -156,7 +156,7 @@ class LocalDeviceAdapter(DeviceAdapter):
 
         if log_output:
             log.info(
-                "cmd: %s, exit code: %d\nstdout:\n%sstderr:\n%s",
+                "cmd: %s, exit code: %d\nstdout:\n%s\nstderr:\n%s",
                 cmd,
                 exit_code,
                 to_str(stdout) or "<<empty>>",
