@@ -242,7 +242,9 @@ class SSHDeviceAdapter(DeviceAdapter):
         timeout = kwargs.pop("timeout", 120)
         chan = tran.open_session(timeout=timeout)
 
-        chan.get_pty()
+        # Note: stderr is only returned if it is NOT a pty terminal
+        # if stderr:
+        #     chan.get_pty()
         f_stdout = chan.makefile()
         f_stderr = chan.makefile_stderr()
         chan.exec_command(command)

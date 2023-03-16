@@ -152,7 +152,7 @@ class LocalDeviceAdapter(DeviceAdapter):
 
         exit_code = proc.wait(timeout)
         stdout = proc.stdout.read()
-        stderr = proc.stdout.read()
+        stderr = proc.stderr.read()
 
         if log_output:
             log.info(
