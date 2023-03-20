@@ -107,6 +107,7 @@ class DockerDeviceFactory:
         test_suite: str = "",
         test_id: str = "",
         env: Dict[str, str] = None,
+        extra_hosts: Dict[str, str] = None,
         **kwargs,
     ) -> DeviceAdapter:
         """Create a new device (container) from the provided image
@@ -123,6 +124,8 @@ class DockerDeviceFactory:
                 called "device.test_id"
             test_suite (str, optional): Test set which the container belongs to.
                                         Added to the label "device.test_group_id"
+            extra_hosts(Dict[str,str]): Dictionary of hostname/ipaddress to add to the /etc/hosts file
+                in the container. Useful to mitigate DNS resolution errors
             env (Dict[str,str], optional): Additional environment variables to be added to
                 the container.
                 These will override any values provided by the env_file. (docker devices only!).
@@ -165,6 +168,7 @@ class DockerDeviceFactory:
                 "device.test_group_id": test_suite,
                 "device.test_id": test_id,
             },
+            "extra_hosts": extra_hosts or {},
             "privileged": True,
         }
 
