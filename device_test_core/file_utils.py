@@ -21,7 +21,7 @@ def _parse_base_path_from_pattern(pattern: str) -> str:
 
 
 def make_tarfile(
-    fileobj: IO[bytes], patterns: List[str], compress: bool = False
+    fileobj: IO[bytes], patterns: List[str], dst: str, compress: bool = False
 ) -> int:
     """Make a tar file given a list of patterns
 
@@ -30,6 +30,8 @@ def make_tarfile(
     Args:
         file (str): Tar file where the files will be added to. It does not have to exist.
         patterns (List[str]): List of glob patterns to be added to the tar file
+        dst (str): Destination to store the path to. Use trailing slash to copy to a
+            folder.
         compress (bool, optional): Use compression when creating tar (e.g. gzip)
     """
     total_files = 0
@@ -39,10 +41,15 @@ def make_tarfile(
             source_dir = _parse_base_path_from_pattern(pattern)
 
             for match in glob.glob(pattern):
-                if match == source_dir:
-                    archive_path = os.path.basename(match)
+                if dst.endswith("/"):
+                    # Copy files to folder
+                    if match == source_dir:
+                        archive_path = os.path.basename(match)
+                    else:
+                        archive_path = match[len(source_dir) :].lstrip("/")
                 else:
-                    archive_path = match[len(source_dir) :].lstrip("/")
+                    # Copy/rename single file
+                    archive_path = os.path.basename(dst)
                 log.debug("Adding file: path=%s, archive_path=%s", match, archive_path)
                 tar.add(match, arcname=archive_path)
                 total_files += 1

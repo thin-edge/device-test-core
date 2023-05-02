@@ -320,7 +320,7 @@ class SSHDeviceAdapter(DeviceAdapter):
             with tempfile.NamedTemporaryFile(
                 mode="wb", suffix=".tar", delete=False
             ) as file:
-                total_files = make_tarfile(file, [src])
+                total_files = make_tarfile(file, [src], dst)
                 archive_path = file.name
 
             if total_files > 1 or dst.endswith("/") or dst in [".", ".."]:
