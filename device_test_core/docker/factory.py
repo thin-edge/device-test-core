@@ -98,6 +98,26 @@ class DockerDeviceFactory:
 
         return network
 
+    def attach_device(self, device_id: str, container_id: str = None):
+        """Attach to an existing device (container)
+
+        Args:
+            device_id (str): Device id
+            container_id (str, optional): Container id. If not provided, then the device_id
+                will be used. Default to None.
+        """
+        if not container_id:
+            container_id = device_id
+
+        container = self._docker_client.containers.get(container_id)
+        self._device_containers[device_id] = container
+
+        # Wait for container to be ready
+        self.wait_for_container_running(container, timeout=30)
+
+        device = DockerDeviceAdapter(device_id, container=container, simulator=self)
+        return device
+
     def create_device(
         self,
         device_id: str = "device-01",
