@@ -135,7 +135,7 @@ class LocalDeviceAdapter(DeviceAdapter):
             run_cmd.extend(envs)
 
         if shell:
-            shell_bin = self._config.get("shell_bin", "/bin/bash")
+            shell_bin = self._config.get("shell_bin", "/bin/sh")
             run_cmd.extend([shell_bin, "-c"])
 
         if isinstance(cmd, (list, tuple)):
