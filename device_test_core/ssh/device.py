@@ -210,7 +210,8 @@ class SSHDeviceAdapter(DeviceAdapter):
             run_cmd.extend(envs)
 
         if shell:
-            run_cmd.extend(["/bin/bash", "-c"])
+            shell_bin = self._config.get("shell_bin", "/bin/bash")
+            run_cmd.extend([shell_bin, "-c"])
 
         if isinstance(cmd, (list, tuple)):
             run_cmd.extend(cmd)

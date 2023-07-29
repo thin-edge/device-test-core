@@ -168,7 +168,8 @@ class DockerDeviceAdapter(DeviceAdapter):
             run_cmd.extend(["sudo", "-E"])
 
         if shell:
-            run_cmd = ["/bin/bash", "-c"]
+            shell_bin = self._config.get("shell_bin", "/bin/bash")
+            run_cmd = [shell_bin, "-c"]
 
         if isinstance(cmd, (list, tuple)):
             run_cmd.extend(cmd)
