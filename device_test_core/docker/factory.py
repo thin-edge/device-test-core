@@ -157,7 +157,6 @@ class DockerDeviceFactory:
         log.info("Using container image: %s", image)
         env_options = dotenv.dotenv_values(env_file) or {}
         env_options["DEVICE_ID"] = device_id
-        env_options["DEVICE_TYPE"] = device_type
 
         if env is not None:
             log.info("Using custom environment settings. %s", env)
@@ -179,7 +178,7 @@ class DockerDeviceFactory:
                 "/run": "size=64m",
             },
             "read_only": False,
-            "mem_limit": "128m",
+            "mem_limit": env_options.get("DOCKER_OPTIONS_MEM_LIMIT", "256m"),
             "network": self._network.id,
             "volumes": {},
             "labels": {
