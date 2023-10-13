@@ -100,7 +100,7 @@ class DeviceAdapter(ABC):
 
     def assert_linux_permissions(
         self, path: str, mode: str = None, owner_group: str = None,
-    ) -> List[str, str]:
+    ) -> List[str]:
         """Assert the linux group/ownership and permissions (mode) on a given path
 
         Args:
@@ -109,7 +109,7 @@ class DeviceAdapter(ABC):
             owner_group (str): Owner/group in the format of owner:group. Defaults to None
 
         Returns:
-            List[str, str]: List of the actual mode and owner/group (e.g. ['644', 'root:root'])
+            List[str]: List of the actual mode and owner/group (e.g. ['644', 'root:root'])
         """
         result = self.assert_command(f"stat -c '%a %U:%G' '{path}'")
         actual_mode, actual_owner_group = to_str(result.stdout).strip().partition(" ")
