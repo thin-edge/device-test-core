@@ -99,14 +99,14 @@ class DeviceAdapter(ABC):
         """
 
     def assert_linux_permissions(
-        self, path: str, owner_group: str = None, mode: str = None
+        self, path: str, mode: str = None, owner_group: str = None,
     ) -> List[str, str]:
         """Assert the linux group/ownership and permissions (mode) on a given path
 
         Args:
             path (str): Path to a file or folder to test against
-            owner_group (str): Owner/group in the format of owner:group. Defaults to None
             mode (str): Mode (as an octal), .eg. 644 or 755 etc. Defaults to None
+            owner_group (str): Owner/group in the format of owner:group. Defaults to None
 
         Returns:
             List[str, str]: List of the actual mode and owner/group (e.g. ['644', 'root:root'])
