@@ -98,6 +98,34 @@ class DeviceAdapter(ABC):
             CmdOutput: Command output details, e.g. stdout, stderr and return_code
         """
 
+    def assert_linux_permissions(
+        self, path: str, owner_group: str = None, mode: str = None
+    ) -> List[str, str]:
+        """Assert the linux group/ownership and permissions (mode) on a given path
+
+        Args:
+            path (str): Path to a file or folder to test against
+            owner_group (str): Owner/group in the format of owner:group. Defaults to None
+            mode (str): Mode (as an octal), .eg. 644 or 755 etc. Defaults to None
+
+        Returns:
+            List[str, str]: List of the actual mode and owner/group (e.g. ['644', 'root:root'])
+        """
+        result = self.assert_command(f"stat -c '%a %U:%G' '{path}'")
+        actual_mode, actual_owner_group = to_str(result.stdout).strip().partition(" ")
+
+        if mode is not None:
+            assert (
+                actual_mode == mode
+            ), f"File/dir mode does not match\npath: {path}\ngot:\n{actual_mode}\nwanted:\n{mode}"
+
+        if owner_group is not None:
+            assert (
+                owner_group == actual_owner_group
+            ), f"File/dir path owner/group does not match\npath: {path}\ngot:\n{actual_owner_group}\nwanted:\n{owner_group}"
+
+        return [actual_mode, actual_owner_group]
+
     def assert_command(
         self,
         cmd: str,
