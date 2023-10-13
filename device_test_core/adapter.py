@@ -112,7 +112,7 @@ class DeviceAdapter(ABC):
             List[str]: List of the actual mode and owner/group (e.g. ['644', 'root:root'])
         """
         result = self.assert_command(f"stat -c '%a %U:%G' '{path}'")
-        actual_mode, actual_owner_group = to_str(result.stdout).strip().partition(" ")
+        actual_mode, _, actual_owner_group = to_str(result.stdout).strip().partition(" ")
 
         if mode is not None:
             assert (
