@@ -1,4 +1,5 @@
 """Device adapter"""
+import hashlib
 import logging
 from typing import List, Any, Dict, Optional, Union
 from datetime import datetime, timezone
@@ -99,7 +100,10 @@ class DeviceAdapter(ABC):
         """
 
     def assert_linux_permissions(
-        self, path: str, mode: str = None, owner_group: str = None,
+        self,
+        path: str,
+        mode: str = None,
+        owner_group: str = None,
     ) -> List[str]:
         """Assert the linux group/ownership and permissions (mode) on a given path
 
@@ -112,7 +116,9 @@ class DeviceAdapter(ABC):
             List[str]: List of the actual mode and owner/group (e.g. ['644', 'root:root'])
         """
         result = self.assert_command(f"stat -c '%a %U:%G' '{path}'")
-        actual_mode, _, actual_owner_group = to_str(result.stdout).strip().partition(" ")
+        actual_mode, _, actual_owner_group = (
+            to_str(result.stdout).strip().partition(" ")
+        )
 
         if mode is not None:
             assert (
@@ -125,6 +131,31 @@ class DeviceAdapter(ABC):
             ), f"File/dir path owner/group does not match\npath: {path}\ngot:\n{actual_owner_group}\nwanted:\n{owner_group}"
 
         return [actual_mode, actual_owner_group]
+
+    def assert_file_checksum(self, file: str, reference_file: str) -> str:
+        """Assert that two files are equal by checking their md5 checksum
+
+        Args:
+            file (str): path to file on the device
+            reference_file (str): path to the local file which will be used to compare
+                the checksum against
+
+        Returns:
+            str: checksum of the file on the device
+        """
+        with open(reference_file, "rb") as fp:
+            expected_checksum = hashlib.md5(fp).hexdigest().lower()
+
+        output = self.assert_command(f"md5sum '{file}'")
+        actual_checksum = output.stdout.split(" ")[0]
+        assert actual_checksum == expected_checksum, (
+            f"File is not equal\n"
+            f"reference_file (local): {reference_file}\n"
+            f"file (device): {file}\n"
+            f"got:\n{actual_checksum}\n"
+            f"wanted:\n{expected_checksum}"
+        )
+        return actual_checksum
 
     def assert_command(
         self,
