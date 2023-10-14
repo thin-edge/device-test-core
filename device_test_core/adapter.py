@@ -104,6 +104,7 @@ class DeviceAdapter(ABC):
         path: str,
         mode: str = None,
         owner_group: str = None,
+        **kwargs,
     ) -> List[str]:
         """Assert the linux group/ownership and permissions (mode) on a given path
 
@@ -115,7 +116,7 @@ class DeviceAdapter(ABC):
         Returns:
             List[str]: List of the actual mode and owner/group (e.g. ['644', 'root:root'])
         """
-        result = self.assert_command(f"stat -c '%a %U:%G' '{path}'")
+        result = self.assert_command(f"stat -c '%a %U:%G' '{path}'", **kwargs)
         actual_mode, _, actual_owner_group = (
             to_str(result.stdout).strip().partition(" ")
         )
@@ -132,7 +133,7 @@ class DeviceAdapter(ABC):
 
         return [actual_mode, actual_owner_group]
 
-    def assert_file_checksum(self, file: str, reference_file: str) -> str:
+    def assert_file_checksum(self, file: str, reference_file: str, **kwargs) -> str:
         """Assert that two files are equal by checking their md5 checksum
 
         Args:
@@ -146,7 +147,7 @@ class DeviceAdapter(ABC):
         with open(reference_file, "rb") as fp:
             expected_checksum = hashlib.md5(fp).hexdigest().lower()
 
-        output = self.assert_command(f"md5sum '{file}'")
+        output = self.assert_command(f"md5sum '{file}'", **kwargs)
         actual_checksum = output.stdout.split(" ")[0]
         assert actual_checksum == expected_checksum, (
             f"File is not equal\n"
