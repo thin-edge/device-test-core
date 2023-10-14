@@ -145,7 +145,7 @@ class DeviceAdapter(ABC):
             str: checksum of the file on the device
         """
         with open(reference_file, "rb") as fp:
-            expected_checksum = hashlib.md5(fp).hexdigest().lower()
+            expected_checksum = hashlib.md5(fp.read()).hexdigest().lower()
 
         output = self.assert_command(f"md5sum '{file}'", **kwargs)
         actual_checksum = output.stdout.split(" ")[0]
