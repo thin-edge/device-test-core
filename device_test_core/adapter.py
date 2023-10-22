@@ -122,14 +122,20 @@ class DeviceAdapter(ABC):
         )
 
         if mode is not None:
-            assert (
-                actual_mode == mode
-            ), f"File/dir mode does not match\npath: {path}\ngot:\n{actual_mode}\nwanted:\n{mode}"
+            assert actual_mode == mode, (
+                f"File/dir mode does not match\n"
+                f"  path: {path}\n"
+                f"  got: {actual_mode}\n"
+                f"  wanted: {mode}"
+            )
 
         if owner_group is not None:
-            assert (
-                owner_group == actual_owner_group
-            ), f"File/dir path owner/group does not match\npath: {path}\ngot:\n{actual_owner_group}\nwanted:\n{owner_group}"
+            assert owner_group == actual_owner_group, (
+                f"File/dir path owner/group does not match\n"
+                f"  path: {path}\n"
+                f"  got: {actual_owner_group}\n"
+                f"  wanted: {owner_group}"
+            )
 
         return [actual_mode, actual_owner_group]
 
@@ -153,8 +159,8 @@ class DeviceAdapter(ABC):
             f"File is not equal\n"
             f"reference_file (local): {reference_file}\n"
             f"file (device): {file}\n"
-            f"got:\n{actual_checksum}\n"
-            f"wanted:\n{expected_checksum}"
+            f"got: {actual_checksum}\n"
+            f"wanted: {expected_checksum}"
         )
         return actual_checksum
 
