@@ -229,7 +229,7 @@ class DockerDeviceFactory:
         self.connect_network(container)
         return device
 
-    def parse_docker_options(env_options: Dict[str, str]) -> Dict[str, Any]:
+    def parse_docker_options(self, env_options: Dict[str, str]) -> Dict[str, Any]:
         """Parse any docker options provided as environment variables
 
         Args:
