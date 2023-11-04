@@ -5,7 +5,7 @@ import os
 import shutil
 import subprocess
 import time
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Any
 import dotenv
 import docker
 from docker.errors import NotFound, APIError
@@ -132,6 +132,18 @@ class DockerDeviceFactory:
     ) -> DeviceAdapter:
         """Create a new device (container) from the provided image
 
+        Note:
+            Custom docker options can be provided by providing environment variables in the format of:
+                DOCKER_OPTIONS_<key_uppercase>
+
+            Examples:
+                DOCKER_OPTIONS_MEM_LIMIT=1GB
+                DOCKER_OPTIONS_CPU_QUOTA=10000
+                DOCKER_OPTIONS_CPU_PERIOD=20000
+
+            See Containers#Parameters for the full options:
+                https://docker-py.readthedocs.io/en/stable/containers.html#docker.models.containers.ContainerCollection.run
+
         Args:
             device_id (str, optional): Device id. defaults to device-01
             device_type (str, optional): Device type. defaults to docker-debian
@@ -178,7 +190,7 @@ class DockerDeviceFactory:
                 "/run": "size=64m",
             },
             "read_only": False,
-            "mem_limit": env_options.get("DOCKER_OPTIONS_MEM_LIMIT", "256m"),
+            "mem_limit": "256m",
             "network": self._network.id,
             "volumes": {},
             "labels": {
@@ -190,6 +202,15 @@ class DockerDeviceFactory:
             "extra_hosts": extra_hosts or {},
             "privileged": True,
         }
+
+        # Add docker specific options
+        custom_options = self.parse_docker_options(env_options)
+        if custom_options:
+            log.info("Adding custom docker options: %s", custom_options)
+            options = {
+                **options,
+                **custom_options,
+            }
 
         log.info(
             "Creating new container [%s] with device type [%s]", device_id, device_type
@@ -207,6 +228,33 @@ class DockerDeviceFactory:
         device = DockerDeviceAdapter(device_id, container=container, simulator=self)
         self.connect_network(container)
         return device
+
+    def parse_docker_options(env_options: Dict[str, str]) -> Dict[str, Any]:
+        """Parse any docker options provided as environment variables
+
+        Args:
+            env_options(Dict[str, str]): Environment variables
+
+        Returns:
+            Dict[str, Any]: docker options to be used in creation of the container
+        """
+        options = {}
+        for key, value in env_options.items():
+            try:
+                if key.startswith("DOCKER_OPTIONS_"):
+                    docker_key = key.replace("DOCKER_OPTIONS_", "").lower()
+                    if value.isdigit():
+                        options[docker_key] = int(value)
+                    elif value.replace(".", "", 1).isnumeric():
+                        options[docker_key] = float(value)
+                    elif value.lower() in ["true", "false"]:
+                        options[docker_key] = bool(value.lower())
+                    elif value:
+                        # Only non-empty values
+                        options[docker_key] = value
+            except Exception as ex:
+                log.warning("Could not set docker option. %s", ex)
+        return options
 
     def remove_device(self, container: Union[str, Container], alias: str = ""):
         """Remove device container
