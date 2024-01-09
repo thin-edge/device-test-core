@@ -13,7 +13,7 @@ write_to = "device_test_core/_version.py"
 name = "device_test_core"
 description = "Device test library"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 keywords = ["device", "testing"]
 license = {text = "MIT"}
 classifiers = [
@@ -21,10 +21,9 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "python-dotenv >= 0.20.0, < 0.21.0",
+  "python-dotenv >= 1.0.0, < 1.1.0",
   "randomname >= 0.1.5, < 0.2.0",
   "tenacity >= 8.1.0, < 9.0.0",
-  "importlib-metadata >= 6.0.0, < 7.0.0; python_version<'3.8'",
 ]
 
 [project.optional-dependencies]
