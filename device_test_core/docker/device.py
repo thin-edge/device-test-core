@@ -186,8 +186,6 @@ class DockerDeviceAdapter(DeviceAdapter):
                 to_str(stdout) or "<<empty>>",
                 to_str(stderr) or "<<empty>>",
             )
-        else:
-            log.info("cmd: %s, exit code: %d", run_cmd, exit_code)
 
         return CmdOutput(stdout=stdout, stderr=stderr, return_code=exit_code)
 
