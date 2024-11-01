@@ -25,6 +25,7 @@ class DeviceAdapter(ABC):
         should_cleanup: bool = None,
         use_sudo: bool = True,
         config: Dict[str, Any] = None,
+        user: str = "",
     ):
         self._name = name
         self._device_id = (
@@ -36,6 +37,7 @@ class DeviceAdapter(ABC):
         self._use_sudo = use_sudo
         self._config = config
         self._should_cleanup = should_cleanup
+        self._user = user
 
     @property
     def test_start_time(self) -> datetime:
@@ -83,9 +85,17 @@ class DeviceAdapter(ABC):
         """
         return self._use_sudo
 
+    def user(self) -> str:
+        """Shell User
+
+        Returns:
+            str: user to execute the commands under
+        """
+        return self._user
+
     @abstractmethod
     def execute_command(
-        self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
+        self, cmd: str, log_output: bool = True, shell: bool = True, user: str = "", **kwargs
     ) -> CmdOutput:
         """Execute a command inside the docker container
 
@@ -93,6 +103,7 @@ class DeviceAdapter(ABC):
             cmd (str): Command to execute
             log_output (bool, optional): Log the stdout after the command has executed
             shell (bool, optional): Execute the command in a shell
+            user (bool, optional): User that the shell is executed under
             **kwargs (Any, optional): Additional keyword arguments
 
         Returns:

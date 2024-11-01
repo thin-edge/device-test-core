@@ -145,7 +145,7 @@ class DockerDeviceAdapter(DeviceAdapter):
         return self.container.stats(stream=False)
 
     def execute_command(
-        self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
+        self, cmd: str, log_output: bool = True, shell: bool = True, user: str = "", **kwargs
     ) -> CmdOutput:
         """Execute a command inside the docker container
 
@@ -153,6 +153,7 @@ class DockerDeviceAdapter(DeviceAdapter):
             cmd (str): Command to execute
             log_output (bool, optional): Log the stdout after the command has executed
             shell (bool, optional): Execute the command in a shell
+            user (bool, optional): User that the shell is executed under
             **kwargs (Any, optional): Additional keyword arguments
 
         Raises:
@@ -162,6 +163,7 @@ class DockerDeviceAdapter(DeviceAdapter):
             CmdOutput: Command output details, e.g. stdout, stderr and return_code
         """
         run_cmd = []
+        user = user or self.user()
 
         use_sudo = kwargs.pop("sudo", self.use_sudo())
         if use_sudo:
@@ -176,7 +178,7 @@ class DockerDeviceAdapter(DeviceAdapter):
         else:
             run_cmd.append(cmd)
 
-        exit_code, output = self.container.exec_run(run_cmd, demux=True)
+        exit_code, output = self.container.exec_run(run_cmd, user=user or self.user(), demux=True)
         stdout, stderr = output
         if log_output:
             log.info(
