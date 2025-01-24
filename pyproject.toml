@@ -33,8 +33,7 @@ all = [
     "device-test-core[local]",
 ]
 ssh = [
-    "paramiko >= 2.12.0, < 2.13.0",
-    "fabric >= 3.0.0, < 4.0.0",
+    "paramiko >= 3.5, < 3.6",
     "scp >= 0.14.4, < 0.15.0",
 ]
 local = []
