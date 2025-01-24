@@ -14,7 +14,8 @@ from device_test_core.command import CmdOutput
 
 try:
     import paramiko
-    import fabric
+    from paramiko.agent import AgentRequestHandler
+    from paramiko.config import SSHConfig
 except ImportError:
     raise ImportError(
         "Importing Paramiko library failed. " "Make sure you have Paramiko installed."
@@ -29,6 +30,36 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
+
+
+class PrintableProxyCommand(paramiko.ProxyCommand):
+    """Printable version of the paramiko.ProxyCommand
+    so that the proxy command is shown in log entries
+    """
+
+    def __repr__(self):
+        cmd = " ".join(self.cmd)
+        return f"'cmd: \"{cmd}\"'"
+
+
+def hide_sensitive_ssh_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Hide sensitive configuration info so it can be
+    safely logged
+
+    Args:
+        config (Dict[str, Any]): SSH configuration
+
+    Returns:
+        Dict[str, Any]: SSH config with redacted sensitive fields
+    """
+    output = {**config}
+    if "password" in output:
+        output["password"] = "<redacted>"
+
+    if "passphrase" in output:
+        output["passphrase"] = "<redacted>"
+
+    return output
 
 
 class SSHDeviceAdapter(DeviceAdapter):
@@ -163,24 +194,47 @@ class SSHDeviceAdapter(DeviceAdapter):
         ssh_config_path = self._get_config_value("configpath", "~/.ssh/config")
         port = self._get_config_value("port", None)
 
-        config = fabric.Config(ssh_config=self.load_ssh_config(ssh_config_path))
-        connect_kwargs = {}
-        if password:
-            connect_kwargs["password"] = password
+        config = {
+            "hostname": hostname,
+            "timeout": 30,
+            "allow_agent": True,
+        }
 
-        assert hostname, "Missing hostname from adapter configuration"
-        self._client = fabric.Connection(
-            **{
-                "host": hostname,
-                "port": port,
-                "user": username,
-                "config": config,
-                "connect_timeout": 30,
-                "connect_kwargs": connect_kwargs,
-            },
-        )
-        # Open the connect so that it can fail fast when there is a problem
-        self._client.open()
+        if password:
+            config["password"] = password
+
+        if username:
+            config["username"] = username
+
+        if port:
+            config["port"] = port
+
+        ssh_config = self.load_ssh_config(ssh_config_path)
+        user_config = ssh_config.lookup(hostname)
+        for k in ("hostname", "username", "port"):
+            if k in user_config:
+                config[k] = user_config[k]
+
+        host_key_policy = paramiko.AutoAddPolicy()
+
+        # Check if a proxycommand is used in the ssh config, namely when using c8y remoteaccess server
+        if "proxycommand" in user_config:
+            proxy_command = user_config["proxycommand"]
+            if hostname:
+                proxy_command = proxy_command.replace("%n", hostname)
+
+            print("Proxy Command: ", proxy_command)
+            config["sock"] = PrintableProxyCommand(proxy_command)
+
+        assert config["hostname"], "Missing hostname from adapter configuration"
+        self._client = paramiko.SSHClient()
+        self._client.load_system_host_keys()
+        self._client.set_missing_host_key_policy(host_key_policy)
+
+        log.warn("Connecting to ssh with config. %s", hide_sensitive_ssh_config(config))
+        self._client.connect(**config)
+        session = self._client.get_transport().open_session()
+        AgentRequestHandler(session)
 
     def execute_command(
         self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
@@ -220,14 +274,6 @@ class SSHDeviceAdapter(DeviceAdapter):
             run_cmd.append(cmd)
 
         result = self._execute(shlex.join(run_cmd), **kwargs)
-        # FIXME: Currently if the timeout value is set, the test hangs when the session is closed
-        # holding up the whole tests. It seems that the timeout setting is not being passed to all
-        # required components. There are some notes about this https://github.com/fabric/fabric/issues/2197
-        # however the suggested solution did not work. This will most likely be fixed by the library
-        # at some point. Let's wait until it is fixed before using it.
-        # timeout = kwargs.pop("timeout", 120)
-        # raw_result = self._client.run(shlex.join(run_cmd), pty=True, hide=True)
-        # result = CmdOutput(return_code=raw_result.return_code, stdout=raw_result.stdout, stderr=raw_result.stderr)
 
         if log_output:
             logging.info(
@@ -240,7 +286,7 @@ class SSHDeviceAdapter(DeviceAdapter):
         return result
 
     def _execute(self, command: str, **kwargs) -> CmdOutput:
-        tran = self._client.transport
+        tran = self._client.get_transport()
         timeout = kwargs.pop("timeout", 120)
         chan = tran.open_session(timeout=timeout)
 
