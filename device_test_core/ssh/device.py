@@ -148,7 +148,8 @@ class SSHDeviceAdapter(DeviceAdapter):
             config = ssh_config.lookup(host_entry)
             include_path = config.get("include")
             if include_path and os.path.exists(include_path):
-                ssh_config.parse(open(include_path, encoding="utf8"))
+                with open(include_path, encoding="utf8") as file:
+                    ssh_config.parse(file)
 
         return ssh_config
 
