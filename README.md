@@ -37,3 +37,33 @@ pip3 install "device-test-core[ssh] @ git+https://github.com/reubenmiller/device
 ```
 pip3 install "device-test-core[local] @ git+https://github.com/reubenmiller/device-test-core.git"
 ```
+
+
+### Running Tests
+
+#### SSH tests using an ssh-agent
+
+1. Add the target device's hostname and username
+
+    ```sh
+    echo "SSH_CONFIG_HOSTNAME=mydevice.local" >> .env
+    echo "SSH_CONFIG_USERNAME=root" >> .env
+    ```
+
+2. Start the ssh-agent (if not already done by default in your shell profile)
+
+    ```sh
+    eval $(ssh-agent)
+    ```
+
+3. Import your SSH key that you want to the ssh-agent (so the test can access it)
+
+    ```sh
+    ssh-add ~/.ssh/<mysshkey>
+    ```
+
+4. Run the tests
+
+    ```sh
+    just test
+    ```
