@@ -237,7 +237,7 @@ class SSHDeviceAdapter(DeviceAdapter):
         AgentRequestHandler(session)
 
     def execute_command(
-        self, cmd: str, log_output: bool = True, shell: bool = True, **kwargs
+        self, cmd: str, log_output: bool = True, shell: bool = True, user: str = "", **kwargs
     ) -> CmdOutput:
         """Execute a command
 
@@ -245,6 +245,7 @@ class SSHDeviceAdapter(DeviceAdapter):
             cmd (str): Command to execute
             log_output (bool, optional): Log the stdout after the command has executed
             shell (bool, optional): Execute the command in a shell
+            user (bool, optional): User that the shell is executed under
             **kwargs (Any, optional): Additional keyword arguments
 
         Raises:
@@ -254,6 +255,11 @@ class SSHDeviceAdapter(DeviceAdapter):
             CmdOutput: Command output details, e.g. stdout, stderr and return_code
         """
         run_cmd = []
+
+        # Note: the ssh user is 
+        user = user or self.user()
+        if user:
+            run_cmd.extend(["sudo", "-E", "-u", user])
 
         use_sudo = kwargs.pop("sudo", self.use_sudo())
         if use_sudo:
