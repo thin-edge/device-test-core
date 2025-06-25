@@ -167,7 +167,7 @@ class DeviceAdapter(ABC):
     def assert_command(
         self,
         cmd: str,
-        exp_exit_code: Union[int, str] = 0,
+        exp_exit_code: Optional[Union[int, str]] = 0,
         log_output: bool = True,
         **kwargs,
     ) -> CmdOutput:
