@@ -49,14 +49,14 @@ class DockerDeviceAdapter(DeviceAdapter):
     def __init__(
         self,
         name: str,
-        device_id: str = None,
-        container=None,
+        device_id: Optional[str] = None,
+        container: Optional[Container] = None,
         simulator=None,
-        should_cleanup: bool = None,
+        should_cleanup: Optional[bool] = None,
         use_sudo: bool = True,
         **kwargs,
     ):
-        self._container = container
+        self._container: Optional[Container] = container
         self.simulator = simulator
         self._is_existing_device = False
         super().__init__(
@@ -74,6 +74,7 @@ class DockerDeviceAdapter(DeviceAdapter):
         Returns:
             Container: Container
         """
+        assert self._container, "Container not found"
         return self._container
 
     @container.setter
@@ -246,9 +247,9 @@ class DockerDeviceAdapter(DeviceAdapter):
             src (str): Source file (on host)
             dst (str): Destination (in container)
         """
+        archive_path = ""
         try:
             total_files = 0
-            archive_path = ""
 
             # build archive
             with tempfile.NamedTemporaryFile(

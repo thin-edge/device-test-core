@@ -23,11 +23,11 @@ class LocalDeviceAdapter(DeviceAdapter):
     def __init__(
         self,
         name: str,
-        device_id: str = None,
-        env: Dict[str, str] = None,
-        should_cleanup: bool = None,
+        device_id: Optional[str] = None,
+        env: Optional[Dict[str, Optional[str]]] = None,
+        should_cleanup: Optional[bool] = None,
         use_sudo: bool = True,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             name,
@@ -131,7 +131,7 @@ class LocalDeviceAdapter(DeviceAdapter):
 
         if self._env:
             log.info("Setting environment variables")
-            envs = ["env"] + [f"{key}={value}" for key, value in self._env.items()]
+            envs = ["env"] + [f"{key}={value}" for key, value in self._env.items() if value is not None]
             run_cmd.extend(envs)
 
         if shell:
@@ -152,8 +152,8 @@ class LocalDeviceAdapter(DeviceAdapter):
         )
 
         exit_code = proc.wait(timeout)
-        stdout = proc.stdout.read()
-        stderr = proc.stderr.read()
+        stdout = proc.stdout.read() if proc.stdout else b""
+        stderr = proc.stderr.read() if proc.stderr else b""
 
         if log_output:
             log.info(
@@ -215,9 +215,9 @@ class LocalDeviceAdapter(DeviceAdapter):
             src (str): Source file (on host)
             dst (str): Destination (on device)
         """
+        archive_path = ""
         try:
             total_files = 0
-            archive_path = ""
 
             # build archive
             with tempfile.NamedTemporaryFile(

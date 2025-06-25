@@ -3,7 +3,7 @@
 import logging
 import os
 import dotenv
-from typing import Dict
+from typing import Dict, Optional
 from device_test_core.ssh.device import SSHDeviceAdapter, DeviceAdapter
 
 # pylint: disable=broad-except
@@ -18,7 +18,7 @@ class SSHDeviceFactory:
         self,
         device_id: str,
         env_file=".env",
-        env: Dict[str, str] = None,
+        env: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> DeviceAdapter:
         """Create a new device adapter using SSH

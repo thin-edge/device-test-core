@@ -98,7 +98,7 @@ class DockerDeviceFactory:
 
         return network
 
-    def attach_device(self, device_id: str, container_id: str = None):
+    def attach_device(self, device_id: str, container_id: Optional[str] = None):
         """Attach to an existing device (container)
 
         Args:
@@ -126,8 +126,8 @@ class DockerDeviceFactory:
         env_file=".env",
         test_suite: str = "",
         test_id: str = "",
-        env: Dict[str, str] = None,
-        extra_hosts: Dict[str, str] = None,
+        env: Optional[Dict[str, str]] = None,
+        extra_hosts: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> DeviceAdapter:
         """Create a new device (container) from the provided image
@@ -191,7 +191,6 @@ class DockerDeviceFactory:
             },
             "read_only": False,
             "mem_limit": "256m",
-            "network": self._network.id,
             "volumes": {},
             "labels": {
                 "device.inttest": "1",
@@ -202,6 +201,8 @@ class DockerDeviceFactory:
             "extra_hosts": extra_hosts or {},
             "privileged": True,
         }
+        if self._network:
+            options["network"] = self._network.id
 
         # Add docker specific options
         custom_options = self.parse_docker_options(env_options)
@@ -229,7 +230,7 @@ class DockerDeviceFactory:
         self.connect_network(container)
         return device
 
-    def parse_docker_options(self, env_options: Dict[str, str]) -> Dict[str, Any]:
+    def parse_docker_options(self, env_options: Dict[str, Optional[str]]) -> Dict[str, Any]:
         """Parse any docker options provided as environment variables
 
         Args:
@@ -241,6 +242,8 @@ class DockerDeviceFactory:
         options = {}
         for key, value in env_options.items():
             try:
+                if value is None:
+                    continue
                 if key.startswith("DOCKER_OPTIONS_"):
                     docker_key = key.replace("DOCKER_OPTIONS_", "").lower()
                     if value.isdigit():
@@ -263,34 +266,39 @@ class DockerDeviceFactory:
             container (Union[str, Container]): Container, container id or container name
             alias (str): Device alias (i.e. device-01)
         """
+
         if isinstance(container, str):
             name = container
-            container = self.get_container_by_name(name)
-            if container is None:
+            current_container = self.get_container_by_name(name)
+            if current_container is None:
                 log.info(
                     "Container does not exist, so no need to remove it. name=%s", name
                 )
                 return
+        elif isinstance(container, Container):
+            current_container = container
+        else:
+            raise TypeError("Invalid container type")
 
         log.info(
             "Found existing container. alias=%s, name=%s, id=%s",
             alias,
-            container.name,
-            container.id,
+            current_container.name,
+            current_container.id,
         )
         try:
-            self.disconnect_network(container)
+            self.disconnect_network(current_container)
             log.info("Disconnected container from the network")
         except Exception as ex:
             log.warning("Could not remove container from the network. exception=%s", ex)
 
         try:
-            container.remove(force=True)
+            current_container.remove(force=True)
             log.info(
                 "Removed existing container [alias=%s, name=%s, id=%s]",
                 alias,
-                container.name,
-                container.id,
+                current_container.name,
+                current_container.id,
             )
         except Exception as ex:
             log.error("Failed to remove container. exception=%s", ex)
@@ -416,7 +424,8 @@ class DockerDeviceFactory:
             except APIError as ex:
                 # Ignore errors if the network is already attached
                 if (
-                    "already exists in network" not in ex.explanation
+                    ex.explanation
+                    and "already exists in network" not in ex.explanation
                     and "already connected to network" not in ex.explanation
                 ):
                     log.error("Could not connect container to network. %s", ex)
@@ -447,7 +456,8 @@ class DockerDeviceFactory:
                 )
             except APIError as ex:
                 if (
-                    "is not connected to network" not in ex.explanation
+                    ex.explanation
+                    and "is not connected to network" not in ex.explanation
                     and "is not connected" not in ex.explanation
                 ):
                     raise

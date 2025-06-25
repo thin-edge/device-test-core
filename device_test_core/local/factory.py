@@ -3,7 +3,7 @@
 import logging
 import os
 import dotenv
-from typing import Dict
+from typing import Any, Dict, Optional
 from device_test_core.local.device import LocalDeviceAdapter, DeviceAdapter
 
 # pylint: disable=broad-except
@@ -18,7 +18,7 @@ class LocalDeviceFactory:
         self,
         device_id: str,
         env_file=".env",
-        env: Dict[str, str] = None,
+        env: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> DeviceAdapter:
         """Create a new device adapter using the local device

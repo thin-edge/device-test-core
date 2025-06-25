@@ -70,11 +70,11 @@ class SSHDeviceAdapter(DeviceAdapter):
     def __init__(
         self,
         name: str,
-        device_id: str = None,
-        env: Dict[str, str] = None,
-        should_cleanup: bool = None,
+        device_id: Optional[str] = None,
+        env: Optional[Dict[str, Optional[str]]] = None,
+        should_cleanup: Optional[bool] = None,
         use_sudo: bool = True,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             name,
@@ -233,7 +233,9 @@ class SSHDeviceAdapter(DeviceAdapter):
 
         log.warn("Connecting to ssh with config. %s", hide_sensitive_ssh_config(config))
         self._client.connect(**config)
-        session = self._client.get_transport().open_session()
+        transport = self._client.get_transport()
+        assert transport, "Transport is not defined"
+        session = transport.open_session()
         AgentRequestHandler(session)
 
     def execute_command(
@@ -261,7 +263,7 @@ class SSHDeviceAdapter(DeviceAdapter):
 
         if self._env:
             log.info("Setting environment variables")
-            envs = ["env"] + [f"{key}={value}" for key, value in self._env.items()]
+            envs = ["env"] + [f"{key}={value}" for key, value in self._env.items() if value is not None]
             run_cmd.extend(envs)
 
         if shell:
@@ -286,9 +288,10 @@ class SSHDeviceAdapter(DeviceAdapter):
         return result
 
     def _execute(self, command: str, **kwargs) -> CmdOutput:
-        tran = self._client.get_transport()
+        transport = self._client.get_transport()
+        assert transport, "Transport is not defined"
         timeout = kwargs.pop("timeout", 120)
-        chan = tran.open_session(timeout=timeout)
+        chan = transport.open_session(timeout=timeout)
 
         # Note: stderr is only returned if it is NOT a pty terminal
         # if stderr:
@@ -360,9 +363,9 @@ class SSHDeviceAdapter(DeviceAdapter):
             src (str): Source file (on host)
             dst (str): Destination (on device)
         """
+        archive_path = ""
         try:
             total_files = 0
-            archive_path = ""
 
             # build archive
             with tempfile.NamedTemporaryFile(
@@ -378,7 +381,9 @@ class SSHDeviceAdapter(DeviceAdapter):
 
             # copy archive to device
             tmp_dst = f"/tmp/{Path(archive_path).name}"
-            with SCPClient(self._client.transport) as scp_client:
+            transport = self._client.get_transport()
+            assert transport, "Transport is not defined"
+            with SCPClient(transport) as scp_client:
                 scp_client.put(archive_path, recursive=True, remote_path=tmp_dst)
 
             self.assert_command(f"mkdir -p '{parent_dir}'")

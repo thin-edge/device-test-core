@@ -32,10 +32,9 @@ def configure_retry_on_members(obj: object, pattern: str, **kwargs):
 
 def retrier(func, *args, **kwargs):
     attempt = None
+    wait = float(kwargs.pop("wait", 2))
+    timeout = float(kwargs.pop("timeout", 30))
     try:
-        wait = float(kwargs.pop("wait", 2))
-        timeout = float(kwargs.pop("timeout", 30))
-
         for attempt in Retrying(
             retry=(
                 retry_if_exception_type((AssertionError, RequestException, OSError))
@@ -51,9 +50,11 @@ def retrier(func, *args, **kwargs):
         raise ex
     except Exception as ex:
         # Append additional context information
-        message = (
-            f"Retries ended. duration={attempt.retry_state.seconds_since_start:.3f}s, "
-            f"attempts={attempt.retry_state.attempt_number}, "
-            f"timeout={timeout:.3f}s, wait={wait:.3f}s"
-        )
-        raise ex from AssertionError(message)
+        if attempt:
+            message = (
+                f"Retries ended. duration={attempt.retry_state.seconds_since_start:.3f}s, "
+                f"attempts={attempt.retry_state.attempt_number}, "
+                f"timeout={timeout:.3f}s, wait={wait:.3f}s"
+            )
+            raise ex from AssertionError(message)
+        raise ex from AssertionError("Retries ended")
