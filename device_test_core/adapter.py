@@ -21,10 +21,10 @@ class DeviceAdapter(ABC):
     def __init__(
         self,
         name: str,
-        device_id: str = None,
-        should_cleanup: bool = None,
+        device_id: Optional[str] = None,
+        should_cleanup: Optional[bool] = None,
         use_sudo: bool = True,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         self._name = name
         self._device_id = (
@@ -34,7 +34,7 @@ class DeviceAdapter(ABC):
         self._test_start_time = datetime.now(timezone.utc)
         self._is_existing_device = False
         self._use_sudo = use_sudo
-        self._config = config
+        self._config = config or {}
         self._should_cleanup = should_cleanup
 
     @property
@@ -102,8 +102,8 @@ class DeviceAdapter(ABC):
     def assert_linux_permissions(
         self,
         path: str,
-        mode: str = None,
-        owner_group: str = None,
+        mode: Optional[str] = None,
+        owner_group: Optional[str] = None,
         **kwargs,
     ) -> List[str]:
         """Assert the linux group/ownership and permissions (mode) on a given path
@@ -167,7 +167,7 @@ class DeviceAdapter(ABC):
     def assert_command(
         self,
         cmd: str,
-        exp_exit_code: Union[int, str] = 0,
+        exp_exit_code: Optional[Union[int, str]] = 0,
         log_output: bool = True,
         **kwargs,
     ) -> CmdOutput:
@@ -282,7 +282,7 @@ class DeviceAdapter(ABC):
         Returns:
             bool: True if the cleanup method should be executed
         """
-        return self._should_cleanup
+        return bool(self._should_cleanup)
 
     @should_cleanup.setter
     def should_cleanup(self, value: bool):
