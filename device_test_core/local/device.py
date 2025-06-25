@@ -131,7 +131,11 @@ class LocalDeviceAdapter(DeviceAdapter):
 
         if self._env:
             log.info("Setting environment variables")
-            envs = ["env"] + [f"{key}={value}" for key, value in self._env.items() if value is not None]
+            envs = ["env"] + [
+                f"{key}={value}"
+                for key, value in self._env.items()
+                if value is not None
+            ]
             run_cmd.extend(envs)
 
         if shell:
