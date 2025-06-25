@@ -1,9 +1,9 @@
 """General utilities"""
-from typing import Any
+from typing import Any, Optional
 import randomname
 
 
-def generate_name(prefix: str = None, sep="_") -> str:
+def generate_name(prefix: Optional[str] = None, sep="_") -> str:
     """Generate a random name
 
     Args:
