@@ -1,4 +1,5 @@
 """Timestamp parsing"""
+
 from typing import Union
 from datetime import datetime
 import dateparser

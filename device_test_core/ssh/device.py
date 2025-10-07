@@ -1,4 +1,5 @@
 """SSH Device Adapter"""
+
 import logging
 import os
 import shlex

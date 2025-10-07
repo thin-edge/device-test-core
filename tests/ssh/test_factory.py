@@ -1,5 +1,5 @@
-"""Software assertion tests
-"""
+"""Software assertion tests"""
+
 import unittest
 from device_test_core.ssh.factory import SSHDeviceFactory
 from tests.fixtures import create_config

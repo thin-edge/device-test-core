@@ -1,4 +1,5 @@
 """Local Device Adapter"""
+
 import logging
 import os
 import subprocess
