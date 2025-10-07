@@ -357,6 +357,7 @@ class DeviceAdapter(ABC):
                 for service in services:
                     cmd += f' -u "{service}"'
 
+        log.info("Getting logs from device using: %s", cmd)
         result = self.execute_command(cmd, log_output=False)
         if result.return_code != 0:
             log.warning(
