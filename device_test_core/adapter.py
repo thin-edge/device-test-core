@@ -1,6 +1,8 @@
 """Device adapter"""
+
 import hashlib
 import logging
+import re
 from typing import List, Any, Dict, Optional, Union
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
@@ -266,6 +268,131 @@ class DeviceAdapter(ABC):
         output.extend(to_str(result.stdout).splitlines())
 
         return output
+
+    def assert_logs(
+        self,
+        services: Optional[List[str]] = None,
+        text: Optional[str] = None,
+        pattern: Optional[str] = None,
+        date_from: Optional[Any] = None,
+        date_to: Optional[Any] = None,
+        max_lines: Optional[int] = 100000,
+        current_only: bool = False,
+        min_matches: int = 1,
+        max_matches: Optional[int] = None,
+    ) -> List[str]:
+        """Assert that a given text or pattern is present in the journalctl logs
+
+        Args:
+            services (List[str], optional): List of systemd services to include in the logs.
+                If not set then all services will be included.
+
+            text (str, optional): Assert the present of a static string (case insensitive).
+                Each line will be checked to see if it contains the given text.
+
+            pattern (str, optional): Assert that a line should match a given regular expression
+                (case insensitive). It must match the entire line.
+
+            date_from (timestamp.Timestamp, optional): Only include log entires from a given
+                datetime/timestamp. As a datetime object or a float (in seconds, e.g. linux timestamp).
+
+            date_to (timestamp.Timestamp, optional): Only include log entires to a given
+                datetime/timestamp. As a datetime object or a float (in seconds, e.g. linux timestamp).
+
+            max_lines (int, optional): Maximum number of log lines to retrieve. Defaults to 100000.
+
+            current_only (bool, optional): Only include logs from the last service invocation.
+                Defaults to False. If set to True, then only a single service can be provided
+                in the services argument.
+
+            min_matches (int, optional): Minimum number of expected line matches (inclusive).
+                Defaults to 1. Assertion will be ignored if set to None.
+
+            max_matches (int, optional): Maximum number of expected line matches (inclusive).
+                Defaults to None. Assertion will be ignored if set to None.
+
+
+        Returns:
+            List[str]: List of log matching entries
+        """
+        cmd = "journalctl --no-pager"
+
+        if max_lines:
+            cmd += f" --lines {max_lines}"
+
+        date_from = (
+            self.test_start_time
+            if date_from is None and not current_only
+            else date_from
+        )
+        if date_from:
+            if isinstance(date_from, datetime):
+                # use linux timestamp as it it simplifies the datetime/timezone parsing
+                date_from = f"@{int(date_from.timestamp())}"
+
+            cmd += f' --since "{date_from}"'
+
+        if date_to:
+            if isinstance(date_to, datetime):
+                # use linux timestamp as it it simplifies the datetime/timezone parsing
+                date_to = f"@{int(date_to.timestamp())}"
+            cmd += f' --until "{date_to}"'
+
+        if services:
+            if current_only:
+                # Only include logs from the last service invocation
+                if len(services) > 1:
+                    raise ValueError(
+                        "When using current_only=True, only a single service can be provided"
+                    )
+                result = self.assert_command(
+                    f"systemctl show -p InvocationID --value '{services[0]}'",
+                    log_output=False,
+                    retries=0,
+                )
+                invocation_id = to_str(result.stdout).strip()
+                if invocation_id:
+                    cmd += f" _SYSTEMD_INVOCATION_ID={invocation_id}"
+            else:
+                for service in services:
+                    cmd += f' -u "{service}"'
+
+        result = self.execute_command(cmd, log_output=False)
+        if result.return_code != 0:
+            log.warning(
+                "Could not retrieve journalctl logs. cmd=%d, exit_code=%d",
+                cmd,
+                result.return_code,
+            )
+
+        entries = to_str(result.stdout).splitlines()
+        matches = []
+        if text:
+            text_lower = text.lower()
+            matches = [line for line in entries if text_lower in str(line).lower()]
+        elif pattern:
+            re_pattern = re.compile(pattern, re.IGNORECASE)
+            matches = [line for line in entries if re_pattern.match(line) is not None]
+        else:
+            matches = entries
+
+        if min_matches is not None:
+            assert len(matches) >= min_matches, (
+                "Total matching log entries is less than expected. "
+                f"wanted={min_matches} (min)\n"
+                f"got={len(matches)}\n\n"
+                f"entries:\n{matches}"
+            )
+
+        if max_matches is not None:
+            assert len(matches) <= max_matches, (
+                "Total matching log entries is greater than expected. "
+                f"wanted={max_matches} (max)\n"
+                f"got={len(matches)}\n\n"
+                f"entries:\n{matches}"
+            )
+
+        return matches
 
     def get_id(self) -> str:
         """Get the device id
