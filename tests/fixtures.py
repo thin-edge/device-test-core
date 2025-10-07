@@ -1,5 +1,5 @@
-"""Test fixtures
-"""
+"""Test fixtures"""
+
 import os
 import dotenv
 from typing import Dict, Any

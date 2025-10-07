@@ -1,4 +1,5 @@
 """Command types and common functions"""
+
 from typing import Union
 from device_test_core.utils import to_str
 

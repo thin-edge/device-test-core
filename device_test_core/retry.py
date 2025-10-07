@@ -1,4 +1,5 @@
 """Retry utils"""
+
 import re
 from functools import wraps
 from device_test_core.errors import FinalAssertionError

@@ -1,4 +1,5 @@
 """Docker Device Adapter"""
+
 import os
 import logging
 import tempfile
