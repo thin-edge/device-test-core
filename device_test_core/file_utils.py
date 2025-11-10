@@ -56,4 +56,9 @@ def make_tarfile(
                 total_files += 1
                 # tar.add(source_dir, arcname=os.path.basename(source_dir))
 
+    if total_files == 0:
+        raise ValueError(
+            f"No matching files found. Check the source patterns and try again. patterns={patterns}"
+        )
+
     return total_files
