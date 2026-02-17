@@ -39,5 +39,11 @@ ssh = [
 ]
 local = []
 docker = [
-    "docker >= 7.1.0, < 7.2.0"
+    # Note: Use a fork of docker-py due to an issue with the exec_run
+    # command which can result in the commands' output (both stdout and stderr)
+    # being omited from the response (though the exit code is correct). This causes
+    # all following assertions to fail unexpectedly.
+    # See the source issue https://github.com/docker/docker-py/issues/3332
+    # "docker >= 7.1.0, < 7.2.0"
+    "docker @ git+https://github.com/reubenmiller/docker-py.git@9d65da7"
 ]
