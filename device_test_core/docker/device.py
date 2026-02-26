@@ -176,7 +176,8 @@ class DockerDeviceAdapter(DeviceAdapter):
         if isinstance(cmd, (list, tuple)):
             run_cmd.extend(cmd)
         else:
-            run_cmd.append(cmd)
+            # FIXME: Add short deley before executing command due to an issue with docker exec
+            run_cmd.append(f"sleep .3 && {cmd}")
 
         exit_code, output = self.container.exec_run(run_cmd, demux=True)
         stdout, stderr = output
