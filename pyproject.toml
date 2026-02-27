@@ -1,34 +1,30 @@
 [build-system]
 requires = [
-    "setuptools>=75",
-    "wheel>=0.43.0",
-    "setuptools-scm[toml]>=8",
+    "setuptools>=61",
+    "wheel",
+    "setuptools-scm[toml]>=6.2",
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "device_test_core/_version.py"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["device_test_core*"]
-
 [project]
 name = "device_test_core"
 description = "Device test library"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 keywords = ["device", "testing"]
-license = "MIT"
+license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dynamic = ["version"]
 dependencies = [
-  "python-dotenv >= 1.0.0, < 2.0.0",
+  "python-dotenv >= 1.0.0, < 1.1.0",
   "randomname >= 0.1.5, < 0.2.0",
-  "tenacity >= 9.0.0, < 10.0.0",
-  "dateparser >= 1.3.0, < 1.4.0",
+  "tenacity >= 8.1.0, < 9.0.0",
+  "dateparser >= 1.2.0, < 1.3.0",
 ]
 
 [project.optional-dependencies]
@@ -38,8 +34,8 @@ all = [
     "device-test-core[local]",
 ]
 ssh = [
-    "paramiko >= 4.0, < 4.1",
-    "scp >= 0.15.0, < 0.16.0",
+    "paramiko >= 3.5, < 3.6",
+    "scp >= 0.14.4, < 0.15.0",
 ]
 local = []
 docker = [
