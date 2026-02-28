@@ -1,9 +1,11 @@
 """Docker Device Adapter"""
 
+import io
 import os
 import logging
+import struct
 import tempfile
-from typing import Any, Optional
+from typing import Any, List, Optional, Tuple
 import time
 from datetime import datetime, timezone
 from docker.models.containers import Container
@@ -138,6 +140,157 @@ class DockerDeviceAdapter(DeviceAdapter):
         """
         return (datetime.now(timezone.utc) - self.start_time).total_seconds()
 
+    def _wait_for_exec(self, exec_id: str, timeout: float = 180.0) -> bool:
+        """Poll exec_inspect until the exec instance is no longer running.
+
+        Args:
+            exec_id: The exec instance ID to wait on.
+            timeout: Maximum seconds to wait before giving up.
+
+        Returns:
+            True if the process finished within the timeout, False otherwise.
+        """
+        assert self.container.client is not None, "Docker container client not found"
+        deadline = time.monotonic() + timeout
+        poll_interval = 0.5
+        while time.monotonic() < deadline:
+            exec_info = self.container.client.api.exec_inspect(exec_id)
+            if not exec_info.get("Running"):
+                return True
+            time.sleep(poll_interval)
+        return False
+
+    def _read_exec_output(self, sock: Any) -> Tuple[bytes, bytes, bool]:
+        """Read stdout and stderr from a Docker multiplexed exec socket.
+
+        Docker exec sockets use a simple framing protocol (public Docker Engine API):
+            [stream_type(1B) | padding(3B) | payload_size(4B big-endian)] [payload]
+        stream_type: 1=stdout, 2=stderr
+
+        ROOT CAUSE OF EMPTY OUTPUT
+        --------------------------
+        docker-py's exec_start(socket=True) returns
+        ``response.raw._fp.fp.raw`` — the raw SocketIO that sits inside the
+        BufferedReader that http.client uses to parse HTTP response headers.
+        BufferedReader reads in 8 KB chunks, so after parsing headers it may
+        have consumed the *entire* response body (the multiplexed output frames)
+        into its internal buffer.  Creating a fresh SocketIO from the underlying
+        raw socket (``sock._sock.makefile("rb")``) bypasses that buffer and reads
+        from an already-drained kernel socket — producing silent empty output for
+        any command whose output fits inside one 8 KB read-ahead (e.g. ``cat`` of
+        a small file, ``date +%s``).
+
+        The fix is to read from the BufferedReader itself
+        (``sock._response.raw._fp.fp``), which holds both the already-buffered
+        bytes and continues to read new ones from the socket.
+
+        Returns:
+            tuple[bytes, bytes, bool]: (stdout, stderr, truncated)
+                truncated is True if the socket closed mid-frame or an OSError occurred.
+        """
+        HEADER_SIZE = 8
+        stdout_chunks: List[bytes] = []
+        stderr_chunks: List[bytes] = []
+        truncated = False
+        READ_TIMEOUT_SECS = 180
+        try:
+            if hasattr(sock, "_sock"):
+                raw_socket = sock._sock
+                if raw_socket is None:
+                    # _sock is None means something already closed this SocketIO
+                    # before we could read from it.
+                    log.warning(
+                        "_read_exec_output: SocketIO._sock is None — "
+                        "the socket was closed before reading started; "
+                        "all output will be empty. "
+                        "sock=%r sock type=%s",
+                        sock,
+                        type(sock).__name__,
+                    )
+                    return b"", b"", True
+                # Set the timeout on the underlying raw socket so long-running
+                # commands don't block forever.
+                raw_socket.settimeout(READ_TIMEOUT_SECS)
+                # Read from http.client's BufferedReader, NOT from a new SocketIO.
+                # The BufferedReader sits at sock._response.raw._fp.fp and already
+                # holds any bytes that were read ahead during HTTP header parsing.
+                # Bypassing it by creating a new SocketIO loses those bytes.
+                try:
+                    sockfile: io.BufferedIOBase = sock._response.raw._fp.fp
+                    owns_sock = False
+                except AttributeError:
+                    # Unexpected docker-py internals — fall back to a fresh SocketIO.
+                    # This may lose read-ahead data for small outputs.
+                    log.warning(
+                        "_read_exec_output: could not access http.client BufferedReader "
+                        "(sock._response.raw._fp.fp); falling back to raw_socket.makefile(). "
+                        "Small command outputs may be lost. sock type=%s",
+                        type(sock).__name__,
+                    )
+                    sockfile = raw_socket.makefile("rb")
+                    owns_sock = False
+            else:
+                try:
+                    sock.settimeout(READ_TIMEOUT_SECS)
+                except AttributeError:
+                    pass
+                sockfile = sock.makefile("rb")
+                owns_sock = True
+            try:
+                while True:
+                    header = sockfile.read(HEADER_SIZE)
+                    if not header:
+                        break  # clean EOF between frames
+                    if len(header) < HEADER_SIZE:
+                        truncated = True
+                        break  # EOF mid-header
+                    stream_type, _, payload_size = struct.unpack(">B3sI", header)
+                    payload = sockfile.read(payload_size)
+                    if len(payload) < payload_size:
+                        truncated = True  # EOF mid-payload; save what arrived
+                    if stream_type == 1:  # stdout
+                        stdout_chunks.append(payload)
+                    elif stream_type == 2:  # stderr
+                        stderr_chunks.append(payload)
+                    if truncated:
+                        break
+            finally:
+                log.debug(
+                    "_read_exec_output: done — stdout_bytes=%d stderr_bytes=%d "
+                    "truncated=%s frames=%d",
+                    sum(len(c) for c in stdout_chunks),
+                    sum(len(c) for c in stderr_chunks),
+                    truncated,
+                    len(stdout_chunks) + len(stderr_chunks),
+                )
+                if owns_sock:
+                    sockfile.close()
+                    sock.close()
+                else:
+                    # We read from http.client's BufferedReader
+                    # (sock._response.raw._fp.fp).  Do NOT close sockfile
+                    # (the inner SocketIO) directly: that leaves the outer
+                    # BufferedReader and http.client.HTTPResponse in a
+                    # half-open state.  Their GC finalizers then call
+                    # HTTPResponse.close() → flush() → self.fp.flush()
+                    # (BufferedReader) → flush inner SocketIO → raises
+                    # "ValueError: I/O operation on closed file".
+                    # Instead, close the HTTPResponse from the outside in so
+                    # it marks itself and its BufferedReader as closed before
+                    # the GC ever sees them.
+                    try:
+                        sock._response.raw.close()
+                    except (AttributeError, ValueError, OSError):
+                        pass
+                    try:
+                        sock.close()
+                    except (ValueError, OSError):
+                        pass
+        except OSError as exc:
+            truncated = True
+            log.warning("Socket error reading exec output: %s", exc)
+        return b"".join(stdout_chunks), b"".join(stderr_chunks), truncated
+
     def get_device_stats(self) -> Any:
         """Get container statistics (i.e. cpu, network traffic etc.)
 
@@ -178,8 +331,50 @@ class DockerDeviceAdapter(DeviceAdapter):
         else:
             run_cmd.append(cmd)
 
-        exit_code, output = self.container.exec_run(run_cmd, demux=True)
-        stdout, stderr = output
+        # NOTE: Use socket=True to read directly from the Docker multiplexed stream
+        # socket rather than going through docker-py's CancellableStream wrapper.
+        # CancellableStream silently converts connection errors (urllib3.ProtocolError,
+        # OSError) into StopIteration, so it is impossible to distinguish a clean EOF
+        # from a broken connection. Reading the raw socket lets us catch OSError
+        # directly and detect truncation (partial header or partial payload).
+        #
+        # The Docker multiplexed stream protocol is part of the public Docker Engine API
+        # (documented at https://docs.docker.com/engine/api/v1.43/#tag/Exec):
+        #   [stream_type(1B) | padding(3B) | payload_size(4B big-endian)] [payload]
+        # stream_type: 1=stdout, 2=stderr
+        #
+        # exec_inspect is called after the socket is drained so the exit code is final.
+        #
+        assert self.container.client is not None, "Docker container client not found"
+        exec_id = self.container.client.api.exec_create(self.container.id, run_cmd)[
+            "Id"
+        ]
+        sock = self.container.client.api.exec_start(exec_id, socket=True)
+        stdout, stderr, stream_truncated = self._read_exec_output(sock)
+        if stream_truncated:
+            # Wait for the process to finish so exec_inspect gives a final exit
+            # code and the caller gets a consistent state to work with.
+            if not self._wait_for_exec(exec_id):
+                log.warning(
+                    "cmd: %s — process did not finish within the wait timeout "
+                    "after stream truncation",
+                    run_cmd,
+                )
+        exec_info = self.container.client.api.exec_inspect(exec_id)
+        exit_code = exec_info["ExitCode"]
+        if stream_truncated:
+            log.warning(
+                "cmd: %s — output stream was truncated; output may be incomplete. "
+                "exec_info: %s",
+                run_cmd,
+                exec_info,
+            )
+
+            # check if the stream was truncated or not, as assertions are built upon this
+            assert (
+                not stream_truncated
+            ), "Output stream was truncated; output may be incomplete"
+
         if log_output:
             log.info(
                 "cmd: %s, exit code: %d\nstdout:\n%s\nstderr:\n%s",
