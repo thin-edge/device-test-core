@@ -21,7 +21,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "python-dotenv >= 1.0.0, < 1.1.0",
+  "python-dotenv >= 1.2.2, < 1.3.0",
   "randomname >= 0.1.5, < 0.2.0",
   "tenacity >= 8.1.0, < 9.0.0",
   "dateparser >= 1.2.0, < 1.3.0",
