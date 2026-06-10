@@ -232,7 +232,7 @@ class SSHDeviceAdapter(DeviceAdapter):
         self._client.load_system_host_keys()
         self._client.set_missing_host_key_policy(host_key_policy)
 
-        log.warn("Connecting to ssh with config. %s", hide_sensitive_ssh_config(config))
+        log.warning("Connecting to ssh with config. %s", hide_sensitive_ssh_config(config))
         self._client.connect(**config)
         transport = self._client.get_transport()
         assert transport, "Transport is not defined"
