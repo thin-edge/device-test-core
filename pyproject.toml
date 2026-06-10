@@ -38,6 +38,8 @@ ssh = [
     "scp >= 0.14.4, < 0.15.0",
 ]
 local = []
+# Includes the docker compose adapter. The compose adapter additionally
+# requires the docker cli with the compose v2 plugin on the host
 docker = [
     "docker >= 7.1.0, < 7.2.0"
 ]

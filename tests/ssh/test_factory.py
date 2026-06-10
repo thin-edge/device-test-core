@@ -11,7 +11,7 @@ class TestSSHFactory(unittest.TestCase):
         return super().setUp()
 
     def test_execute_command(self):
-        device = SSHDeviceFactory().create_device("device", **self.config)
+        device = SSHDeviceFactory().create_device("device", use_sudo=False, **self.config)
 
         output = device.assert_command("ls -l /")
         assert output.return_code == 0

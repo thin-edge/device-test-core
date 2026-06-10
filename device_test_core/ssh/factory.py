@@ -18,6 +18,7 @@ class SSHDeviceFactory:
         self,
         device_id: str,
         env_file=".env",
+        use_sudo: bool = True,
         env: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> DeviceAdapter:
@@ -31,6 +32,7 @@ class SSHDeviceFactory:
                 the container.
                 These will override any values provided by the env_file. (docker devices only!).
                 Defaults to None.
+            use_sudo (bool, optional): Whether to use sudo for command execution. Defaults to True.
 
         Returns:
             DeviceAdapter: Device adapter
@@ -48,5 +50,5 @@ class SSHDeviceFactory:
 
         log.info("Connecting to device [%s]", device_id)
 
-        device = SSHDeviceAdapter(device_id, env=env_options, config=kwargs)
+        device = SSHDeviceAdapter(device_id, use_sudo=use_sudo, env=env_options, config=kwargs)
         return device

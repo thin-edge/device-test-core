@@ -1,5 +1,5 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-    packages=["device_test_core"],
+    packages=find_packages(include=["device_test_core", "device_test_core.*"]),
 )

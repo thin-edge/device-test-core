@@ -126,6 +126,7 @@ class DockerDeviceFactory:
         env_file=".env",
         test_suite: str = "",
         test_id: str = "",
+        use_sudo: bool = True,
         env: Optional[Dict[str, str]] = None,
         extra_hosts: Optional[Dict[str, str]] = None,
         **kwargs,
@@ -162,6 +163,7 @@ class DockerDeviceFactory:
                 the container.
                 These will override any values provided by the env_file. (docker devices only!).
                 Defaults to None.
+            use_sudo (bool, optional): Whether to use sudo when executing commands on the device.
 
         Returns:
             DeviceAdapter: The device adapter
@@ -226,7 +228,7 @@ class DockerDeviceFactory:
         # Wait for container to be ready
         self.wait_for_container_running(container, timeout=30)
 
-        device = DockerDeviceAdapter(device_id, container=container, simulator=self)
+        device = DockerDeviceAdapter(device_id, container=container, simulator=self, use_sudo=use_sudo)
         self.connect_network(container)
         return device
 

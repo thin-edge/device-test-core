@@ -19,6 +19,7 @@ class LocalDeviceFactory:
         device_id: str,
         env_file=".env",
         env: Optional[Dict[str, Any]] = None,
+        use_sudo: bool = True,
         **kwargs,
     ) -> DeviceAdapter:
         """Create a new device adapter using the local device
@@ -31,6 +32,7 @@ class LocalDeviceFactory:
                 the container.
                 These will override any values provided by the env_file. (docker devices only!).
                 Defaults to None.
+            use_sudo (bool, optional): Whether to use sudo when executing commands on the device.
 
         Returns:
             DeviceAdapter: Device adapter
@@ -48,5 +50,5 @@ class LocalDeviceFactory:
 
         log.info("Connecting to device [%s]", device_id)
 
-        device = LocalDeviceAdapter(device_id, env=env_options, config=kwargs)
+        device = LocalDeviceAdapter(device_id, use_sudo=use_sudo, env=env_options, config=kwargs)
         return device
