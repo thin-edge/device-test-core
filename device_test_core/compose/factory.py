@@ -246,6 +246,22 @@ def build_override_config(
     return override
 
 
+def sanitize_project_name(name: str) -> str:
+    """Convert a name (e.g. a device serial number) to a valid compose
+    project name. Compose project names must start with a lowercase letter
+    or digit and may only contain lowercase letters, digits, dashes and
+    underscores.
+
+    Args:
+        name (str): Name, e.g. 'TST_Device.01'
+
+    Returns:
+        str: Valid compose project name, e.g. 'tst_device-01'
+    """
+    name = re.sub(r"[^a-z0-9_-]+", "-", name.lower())
+    return name.lstrip("_-")
+
+
 def map_service_networks(
     config: Dict[str, Any], project_name: str
 ) -> Dict[str, List[str]]:
@@ -789,9 +805,12 @@ class ComposeDeviceFactory:
 
         Args:
             compose_file (str): Path to the docker compose file
-            project_name (str, optional): Compose project name. A unique name
-                is generated if not provided (recommended, as the project name
-                is the isolation boundary between parallel test runs)
+            project_name (str, optional): Compose project name. A unique
+                random name is generated if not provided. Pass a name (e.g.
+                the device serial number) to make the project easier to
+                identify, however it MUST be unique across parallel test runs
+                as the project name is the isolation boundary. The name is
+                sanitized to the allowed character set automatically
             device_service (str, optional): Service which acts as the main
                 device under test. If not set, it is resolved from the compose
                 file (label 'device-test-core.role: main', single service, or
@@ -834,9 +853,17 @@ class ComposeDeviceFactory:
         if not os.path.exists(compose_file):
             raise ValueError(f"compose file not found: {compose_file}")
 
-        if not project_name:
+        if project_name:
+            sanitized = sanitize_project_name(project_name)
+            if sanitized != project_name:
+                log.info(
+                    "Sanitized compose project name. from=%s, to=%s",
+                    project_name,
+                    sanitized,
+                )
+            project_name = sanitized
+        else:
             project_name = self.generate_project_name()
-        project_name = project_name.lower()
         if not PROJECT_NAME_PATTERN.match(project_name):
             raise ValueError(
                 f"Invalid compose project name '{project_name}'. It must "
