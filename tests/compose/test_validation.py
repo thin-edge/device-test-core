@@ -3,10 +3,12 @@
 import unittest
 
 from device_test_core.compose.factory import (
+    PROJECT_NAME_PATTERN,
     ComposeValidationError,
     build_override_config,
     map_service_networks,
     resolve_device_service,
+    sanitize_project_name,
     validate_compose_config,
 )
 
@@ -200,6 +202,26 @@ class TestBuildOverrideConfig(unittest.TestCase):
     def test_no_extra_hosts(self):
         override = build_override_config(["device"], {}, {}, "device")
         self.assertNotIn("extra_hosts", override["services"]["device"])
+
+
+class TestSanitizeProjectName(unittest.TestCase):
+    def test_device_serial_number(self):
+        name = sanitize_project_name("TST_coy_handler")
+        self.assertEqual(name, "tst_coy_handler")
+        self.assertTrue(PROJECT_NAME_PATTERN.match(name))
+
+    def test_replaces_invalid_characters(self):
+        name = sanitize_project_name("TST_Device.01:foo")
+        self.assertEqual(name, "tst_device-01-foo")
+        self.assertTrue(PROJECT_NAME_PATTERN.match(name))
+
+    def test_strips_invalid_leading_characters(self):
+        name = sanitize_project_name("_-device01")
+        self.assertEqual(name, "device01")
+        self.assertTrue(PROJECT_NAME_PATTERN.match(name))
+
+    def test_valid_name_is_unchanged(self):
+        self.assertEqual(sanitize_project_name("tst-device-01"), "tst-device-01")
 
 
 class TestMapServiceNetworks(unittest.TestCase):
