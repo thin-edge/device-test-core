@@ -232,10 +232,17 @@ class DockerDeviceFactory:
         self.connect_network(container)
         return device
 
+    @staticmethod
     def parse_docker_options(
-        self, env_options: Dict[str, Optional[str]]
+        env_options: Dict[str, Optional[str]],
     ) -> Dict[str, Any]:
         """Parse any docker options provided as environment variables
+
+        Options are read from the given ``env_options`` (e.g. loaded from the env file or
+        passed via the ``env`` argument) as well as from the process environment
+        (``os.environ``), so a ``DOCKER_OPTIONS_*`` variable exported in the shell is
+        honoured just like one set in the env file. ``env_options`` take precedence over
+        the process environment when the same key is defined in both.
 
         Args:
             env_options(Dict[str, str]): Environment variables
@@ -243,8 +250,18 @@ class DockerDeviceFactory:
         Returns:
             Dict[str, Any]: docker options to be used in creation of the container
         """
+        # Process environment first so explicit env_options can override it. Only
+        # DOCKER_OPTIONS_* keys are taken from os.environ, so unrelated host variables are
+        # never treated as docker options.
+        sources: Dict[str, Optional[str]] = {
+            key: value
+            for key, value in os.environ.items()
+            if key.startswith("DOCKER_OPTIONS_")
+        }
+        sources.update(env_options)
+
         options = {}
-        for key, value in env_options.items():
+        for key, value in sources.items():
             try:
                 if value is None:
                     continue
