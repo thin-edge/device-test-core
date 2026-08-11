@@ -717,12 +717,17 @@ class ComposeDeviceFactory:
         )
         if proc.returncode != 0:
             raise ComposeError(
-                "docker compose v2 plugin not found. " f"stderr={proc.stderr.strip()}"
+                "docker compose plugin not found. " f"stderr={proc.stderr.strip()}"
             )
-        version = proc.stdout.strip()
-        if version and not version.lstrip("v").startswith("2"):
+        version = proc.stdout.strip().lstrip("v")
+        major_version = 0
+        try:
+            major_version = int(version.split(".")[0])
+        except ValueError:
+            log.warning("Failed to parse docker compose version", version)
+        if major_version and not major_version >= 2:
             log.warning(
-                "Unexpected docker compose version. Only v2 is supported. got=%s",
+                "Unexpected docker compose version. Only ≥v2 is supported. got=%s",
                 version,
             )
         return [docker_cli, "compose"]
