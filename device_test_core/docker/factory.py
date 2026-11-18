@@ -272,7 +272,7 @@ class DockerDeviceFactory:
                     elif value.replace(".", "", 1).isnumeric():
                         options[docker_key] = float(value)
                     elif value.lower() in ["true", "false"]:
-                        options[docker_key] = bool(value.lower())
+                        options[docker_key] = value.lower() == "true"
                     elif value:
                         # Only non-empty values
                         options[docker_key] = value
