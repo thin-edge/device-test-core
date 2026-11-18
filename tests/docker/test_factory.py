@@ -79,6 +79,27 @@ class TestParseDockerOptions(unittest.TestCase):
         self.assertEqual(options["cpu_period"], 1.5)
         self.assertEqual(options["name"], "my-container")
 
+    @mock.patch.dict(os.environ, {}, clear=True)
+    def test_boolean_values(self):
+        """"true"/"false" (any case) are converted to the matching bool.
+
+        Regression test: previously any non-empty string was converted with ``bool()``,
+        so "false" became True (e.g. DOCKER_OPTIONS_PRIVILEGED=false still enabled
+        privileged mode).
+        """
+        options = DockerDeviceFactory.parse_docker_options(
+            {
+                "DOCKER_OPTIONS_PRIVILEGED": "false",
+                "DOCKER_OPTIONS_READ_ONLY": "FALSE",
+                "DOCKER_OPTIONS_TTY": "true",
+                "DOCKER_OPTIONS_DETACH": "True",
+            }
+        )
+        self.assertIs(options["privileged"], False)
+        self.assertIs(options["read_only"], False)
+        self.assertIs(options["tty"], True)
+        self.assertIs(options["detach"], True)
+
 
 if __name__ == "__main__":
     unittest.main()
